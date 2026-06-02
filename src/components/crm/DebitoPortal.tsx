@@ -271,40 +271,6 @@ export function DebitoPortal({
 
           </div>
 
-          {/* RIGHT — sidebar */}
-          <aside className="space-y-6">
-            {/* Profile card */}
-            <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-              <div className="relative h-20 bg-gradient-to-r from-crm-green to-crm-green-dark">
-                <div className="absolute -bottom-8 left-5 grid h-16 w-16 place-items-center rounded-2xl border-4 border-card bg-crm-navy text-lg font-bold text-white">
-                  {initials(debito.nome)}
-                </div>
-              </div>
-              <div className="px-5 pb-5 pt-10">
-                <h3 className="font-serif text-lg font-semibold text-foreground">
-                  {debito.nome}
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  CPF {maskCpfDisplay(debito.cpf)}
-                </p>
-
-                <dl className="mt-4 space-y-2.5 text-sm">
-                  <div className="flex items-start gap-2.5">
-                    <Stethoscope className="mt-0.5 h-4 w-4 flex-none text-crm-green" />
-                    <div>
-                      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Inscrição
-                      </dt>
-                      <dd className="font-medium text-foreground">
-                        CRM {debito.crm}/MG
-                      </dd>
-                    </div>
-                  </div>
-                </dl>
-              </div>
-            </article>
-
-          </aside>
         </section>
 
       </main>
