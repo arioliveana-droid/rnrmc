@@ -1,16 +1,12 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
   BadgeCheck,
   Bell,
-  Building2,
-  Calendar,
   Check,
-  Copy,
   Download,
   FileText,
-  GraduationCap,
   Landmark,
   LifeBuoy,
   Lock,
@@ -46,53 +42,6 @@ function initials(name: string) {
 function maskCpfDisplay(cpf: string) {
   const d = cpf.replace(/\D/g, "").padStart(11, "0");
   return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
-}
-
-function FakeQrCode() {
-  // 21x21 deterministic pattern that looks like a QR
-  const cells = useMemo(() => {
-    const arr: boolean[] = [];
-    let seed = 7;
-    for (let i = 0; i < 21 * 21; i++) {
-      seed = (seed * 9301 + 49297) % 233280;
-      arr.push(seed / 233280 > 0.52);
-    }
-    // finder patterns corners
-    const setFinder = (r: number, c: number) => {
-      for (let i = 0; i < 7; i++)
-        for (let j = 0; j < 7; j++) {
-          const on =
-            i === 0 ||
-            i === 6 ||
-            j === 0 ||
-            j === 6 ||
-            (i >= 2 && i <= 4 && j >= 2 && j <= 4);
-          arr[(r + i) * 21 + (c + j)] = on;
-        }
-    };
-    setFinder(0, 0);
-    setFinder(0, 14);
-    setFinder(14, 0);
-    return arr;
-  }, []);
-
-  return (
-    <svg viewBox="0 0 21 21" className="h-full w-full" aria-hidden>
-      <rect width="21" height="21" fill="white" />
-      {cells.map((on, i) =>
-        on ? (
-          <rect
-            key={i}
-            x={i % 21}
-            y={Math.floor(i / 21)}
-            width="1"
-            height="1"
-            fill="currentColor"
-          />
-        ) : null,
-      )}
-    </svg>
-  );
 }
 
 export function DebitoPortal({
