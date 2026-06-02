@@ -125,29 +125,11 @@ export function DebitoPortal({
               </div>
               <div className="p-5 md:p-6">
                 <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Valor da anuidade 2026
+                  Anuidade 2026
                 </div>
                 <div className="mt-1 font-serif text-3xl font-semibold text-foreground md:text-5xl">
                   {fmtBRL(debito.valor)}
                 </div>
-                <div className="mt-2 text-xs text-muted-foreground">
-                  Consulte as opções de pagamento abaixo.
-                </div>
-
-                <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Código do débito</dt>
-                    <dd className="font-medium text-foreground">{debito.debito_codigo}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Status</dt>
-                    <dd className="font-medium text-crm-green-dark">{debito.status}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Inscrição</dt>
-                    <dd className="font-medium text-foreground">CRM {debito.crm}/MG</dd>
-                  </div>
-                </dl>
 
                 {/* Dois botões: Boleto e Pix (-5%) */}
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
