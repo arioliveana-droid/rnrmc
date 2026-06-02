@@ -310,52 +310,6 @@ export function DebitoPortal({
               </div>
             </article>
 
-            {/* Atalhos */}
-            <article className="rounded-2xl border border-border bg-card p-5 shadow-card">
-              <h3 className="font-serif text-lg font-semibold text-foreground">
-                Serviços do médico
-              </h3>
-              <ul className="mt-4 space-y-1.5 text-sm">
-                {[
-                  { icon: Receipt, label: "Comprovantes de pagamento" },
-                  { icon: Landmark, label: "Negociação de débitos antigos" },
-                  { icon: MapPin, label: "Alterar endereço cadastral" },
-                  { icon: Shield, label: "2ª via da carteira digital" },
-                  { icon: LifeBuoy, label: "Atendimento ao médico" },
-                ].map((it) => (
-                  <li key={it.label}>
-                    <button className="group flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-foreground transition hover:bg-secondary">
-                      <span className="flex items-center gap-3">
-                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-crm-green-soft text-crm-green-dark">
-                          <it.icon className="h-4 w-4" />
-                        </span>
-                        <span className="text-sm font-medium">{it.label}</span>
-                      </span>
-                      <ArrowUpRight className="h-4 w-4 text-muted-foreground transition group-hover:text-crm-green-dark" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </article>
-
-            {/* Segurança */}
-            <article className="rounded-2xl border border-crm-green/25 bg-crm-green-soft p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold text-crm-green-dark">
-                <Lock className="h-4 w-4" />
-                Conexão protegida
-              </div>
-              <p className="mt-2 text-xs leading-relaxed text-crm-green-dark/80">
-                Sessão criptografada (TLS 1.3). Seus dados são tratados conforme
-                a LGPD e usados apenas para localizar débitos vinculados ao seu
-                CRM. Você pode encerrar a sessão a qualquer momento.
-              </p>
-              <button
-                onClick={onLogout}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-crm-green-dark hover:underline"
-              >
-                Encerrar sessão <ArrowUpRight className="h-3.5 w-3.5" />
-              </button>
-            </article>
           </aside>
         </section>
 
