@@ -180,17 +180,13 @@ export function DebitoPortal({
                   {fmtBRL(debito.valor)}
                 </div>
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Vencimento em 31/03/2026.
+                  Consulte as opções de pagamento abaixo.
                 </div>
 
                 <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <dt className="text-xs text-muted-foreground">Código do débito</dt>
                     <dd className="font-medium text-foreground">{debito.debito_codigo}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted-foreground">Exercício</dt>
-                    <dd className="font-medium text-foreground">2026</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-muted-foreground">Status</dt>
@@ -221,9 +217,6 @@ export function DebitoPortal({
                     <span className="font-serif text-xl font-semibold text-foreground">
                       {fmtBRL(valorPix)}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      Compensação imediata
-                    </span>
                   </button>
 
                   <button
@@ -240,50 +233,22 @@ export function DebitoPortal({
                     <span className="font-serif text-xl font-semibold text-foreground">
                       {fmtBRL(debito.valor)}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">
-                      Pagável em qualquer banco
-                    </span>
                   </button>
                 </div>
 
                 {/* Conteúdo do método escolhido */}
                 {metodo === "pix" && (
                   <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-center">
-                      <div className="mx-auto w-40 rounded-2xl border border-border bg-white p-3 text-crm-navy shadow-card md:mx-0 md:w-44">
-                        <FakeQrCode />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                          Pague {fmtBRL(valorPix)} via Pix
-                        </h3>
-                        <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-                          Desconto de 5% aplicado. Após o pagamento a baixa ocorre em até 2 horas úteis.
-                        </p>
-                        <div className="mt-3 rounded-xl border border-border bg-secondary/30 p-3">
-                          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                            Pix copia e cola
-                          </div>
-                          <div className="mt-1 line-clamp-2 break-all font-mono text-[11px] text-foreground/80 md:text-xs">
-                            {pixCode}
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <button
-                            onClick={copyPix}
-                            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none"
-                          >
-                            {copied ? (
-                              <><Check className="h-4 w-4" /> Código copiado</>
-                            ) : (
-                              <><Copy className="h-4 w-4" /> Copiar Pix</>
-                            )}
-                          </button>
-                          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
-                            <Download className="h-4 w-4" /> Baixar QR
-                          </button>
-                        </div>
-                      </div>
+                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+                      Pagamento via Pix
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
+                        <QrCode className="h-4 w-4" /> Gerar código Pix
+                      </button>
                     </div>
                   </div>
                 )}
@@ -291,32 +256,14 @@ export function DebitoPortal({
                 {metodo === "boleto" && (
                   <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
                     <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                      Boleto bancário registrado
+                      Boleto bancário
                     </h3>
                     <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-                      Aceito em qualquer banco, lotérica ou internet banking. Compensação em até 3 dias úteis.
+                      Valor: {fmtBRL(debito.valor)}.
                     </p>
-                    <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/30 p-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                        Linha digitável
-                      </div>
-                      <div className="mt-1 break-all font-mono text-[11px] text-foreground/85 md:text-sm">
-                        23793.38128 60082.{debito.crm.padStart(6, "0")}1 12345.678901 1 9876{Math.floor(debito.valor * 100)}
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <div className="text-xs text-muted-foreground">Valor</div>
-                        <div className="font-semibold text-foreground">{fmtBRL(debito.valor)}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">Vencimento</div>
-                        <div className="font-semibold text-foreground">31/03/2026</div>
-                      </div>
-                    </div>
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark sm:flex-none">
-                        <Download className="h-4 w-4" /> Baixar boleto (PDF)
+                        <Download className="h-4 w-4" /> Gerar boleto
                       </button>
                       <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
                         <Mail className="h-4 w-4" /> Enviar por e-mail
@@ -355,47 +302,11 @@ export function DebitoPortal({
                         Inscrição
                       </dt>
                       <dd className="font-medium text-foreground">
-                        CRM {debito.crm}/MG · Principal
+                        CRM {debito.crm}/MG
                       </dd>
                     </div>
                   </div>
-                  <div className="flex items-start gap-2.5">
-                    <GraduationCap className="mt-0.5 h-4 w-4 flex-none text-crm-green" />
-                    <div>
-                      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Especialidade registrada
-                      </dt>
-                      <dd className="font-medium text-foreground">Clínica Médica</dd>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Building2 className="mt-0.5 h-4 w-4 flex-none text-crm-green" />
-                    <div>
-                      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Local de atuação
-                      </dt>
-                      <dd className="font-medium text-foreground">Belo Horizonte · MG</dd>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Calendar className="mt-0.5 h-4 w-4 flex-none text-crm-green" />
-                    <div>
-                      <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                        Última atualização
-                      </dt>
-                      <dd className="font-medium text-foreground">02/06/2026</dd>
-                    </div>
-                  </div>
                 </dl>
-
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                  <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background text-xs font-semibold text-foreground hover:bg-secondary">
-                    <Download className="h-3.5 w-3.5" /> Carteira
-                  </button>
-                  <button className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background text-xs font-semibold text-foreground hover:bg-secondary">
-                    <FileText className="h-3.5 w-3.5" /> Certidão
-                  </button>
-                </div>
               </div>
             </article>
 
