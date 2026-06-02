@@ -8,7 +8,6 @@ import {
   Calendar,
   Check,
   Copy,
-  CreditCard,
   Download,
   FileText,
   GraduationCap,
@@ -104,14 +103,15 @@ export function DebitoPortal({
   onLogout: () => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"pix" | "boleto" | "cartao">("pix");
+  const [metodo, setMetodo] = useState<"pix" | "boleto" | null>(null);
 
-  const parcela = debito.valor / 12;
+  const valorPix = debito.valor * 0.95;
 
   const pixCode =
     "00020126580014BR.GOV.BCB.PIX0136anuidade-" +
     debito.crm +
     "-2026@crmmg.org.br5204000053039865802BR5915CRM MINAS GERAIS6009BELO HORIZ62070503***6304A1B2";
+
 
   const copyPix = async () => {
     try {
@@ -167,14 +167,14 @@ export function DebitoPortal({
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-10">
         {/* Hero greeting institucional */}
-        <section className="rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
-          <div className="grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-end">
+        <section className="rounded-2xl border border-border bg-card p-5 shadow-card md:p-8">
+          <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end md:gap-8">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-crm-green-dark md:text-[11px] md:tracking-[0.2em]">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Acesso autenticado · Anuidade 2026
               </div>
-              <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+              <h1 className="mt-4 font-serif text-2xl font-semibold leading-tight text-foreground md:mt-5 md:text-4xl">
                 Olá, Dr<span className="text-muted-foreground">(a).</span>{" "}
                 <span className="text-crm-green-dark">
                   {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
@@ -186,16 +186,16 @@ export function DebitoPortal({
                 e quita a anuidade do exercício corrente.
               </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-crm-green-soft px-3 py-1 text-xs font-semibold text-crm-green-dark ring-1 ring-inset ring-crm-green/30">
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-crm-green-soft px-2.5 py-1 text-[11px] font-semibold text-crm-green-dark ring-1 ring-inset ring-crm-green/30">
                   <BadgeCheck className="h-3.5 w-3.5" />
                   Inscrição ativa
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
                   <Receipt className="h-3.5 w-3.5" />
                   1 débito em aberto
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-border">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Dados verificados
                 </span>
@@ -203,34 +203,35 @@ export function DebitoPortal({
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-border bg-background p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Total em aberto
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
+                  Total
                 </div>
-                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
+                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
                   {fmtBRL(debito.valor)}
                 </div>
               </div>
-              <div className="rounded-xl border border-border bg-background p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
                   Vencimento
                 </div>
-                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
+                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
                   31/03
                 </div>
               </div>
-              <div className="rounded-xl border border-border bg-background p-4">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
                   Inscrição
                 </div>
-                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
-                  {debito.crm}<span className="text-sm text-muted-foreground">/MG</span>
+                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
+                  {debito.crm}<span className="text-xs text-muted-foreground md:text-sm">/MG</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
+
 
         {/* Main grid */}
         <section className="mt-6 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -238,252 +239,170 @@ export function DebitoPortal({
           <div className="space-y-6">
             {/* Débito card */}
             <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-              <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-3">
+              <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/40 px-4 py-3 md:px-5">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Wallet className="h-4 w-4 text-crm-green" />
-                  Débito · {debito.descricao}
+                  <Wallet className="h-4 w-4 flex-none text-crm-green" />
+                  <span className="truncate">Débito · {debito.descricao}</span>
                 </div>
-                <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                <span className="flex-none rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 md:text-[11px]">
                   Em aberto
                 </span>
               </div>
-              <div className="grid gap-6 p-5 md:grid-cols-[1.1fr_1fr] md:p-6">
-                <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Valor original
-                  </div>
-                  <div className="mt-1 font-serif text-4xl font-semibold text-foreground md:text-5xl">
-                    {fmtBRL(debito.valor)}
-                  </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Valor único da anuidade 2026. Vencimento em 31/03/2026.
-                  </div>
-
-                  <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Código do débito</dt>
-                      <dd className="font-medium text-foreground">{debito.debito_codigo}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Exercício</dt>
-                      <dd className="font-medium text-foreground">2026</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Status</dt>
-                      <dd className="font-medium text-crm-green-dark">{debito.status}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-muted-foreground">Vencimento</dt>
-                      <dd className="font-medium text-foreground">31/03/2026</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                {/* Parcelas resumo */}
-                <div className="rounded-xl border border-border bg-background p-4">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Opções de quitação
-                  </div>
-                  <ul className="mt-3 space-y-2.5 text-sm">
-                    <li className="flex items-center justify-between gap-3 rounded-lg bg-crm-green-soft px-3 py-2">
-                      <span className="flex items-center gap-2 font-medium text-crm-green-dark">
-                        <Check className="h-4 w-4" /> À vista (Pix/Boleto)
-                      </span>
-                      <span className="font-semibold text-crm-green-dark">
-                        {fmtBRL(debito.valor)}
-                      </span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-secondary/60">
-                      <span className="text-foreground">3x sem juros</span>
-                      <span className="font-medium text-foreground">
-                        3× {fmtBRL(debito.valor / 3)}
-                      </span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-secondary/60">
-                      <span className="text-foreground">6x sem juros</span>
-                      <span className="font-medium text-foreground">
-                        6× {fmtBRL(debito.valor / 6)}
-                      </span>
-                    </li>
-                    <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-secondary/60">
-                      <span className="text-foreground">12x no cartão</span>
-                      <span className="font-medium text-foreground">
-                        12× {fmtBRL(parcela)}
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </article>
-
-            {/* Pagamento tabs */}
-            <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-              <div className="flex flex-wrap border-b border-border bg-secondary/30">
-                {(
-                  [
-                    { id: "pix", label: "Pix", icon: QrCode },
-                    { id: "boleto", label: "Boleto bancário", icon: FileText },
-                    { id: "cartao", label: "Cartão de crédito", icon: CreditCard },
-                  ] as const
-                ).map((t) => {
-                  const active = tab === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      onClick={() => setTab(t.id)}
-                      className={`relative flex items-center gap-2 px-5 py-3 text-sm font-semibold transition ${
-                        active
-                          ? "text-crm-green-dark"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <t.icon className="h-4 w-4" />
-                      {t.label}
-                      {active && (
-                        <span className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-crm-green" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
               <div className="p-5 md:p-6">
-                {tab === "pix" && (
-                  <div className="grid gap-6 md:grid-cols-[auto_1fr] md:items-center">
-                    <div className="mx-auto w-48 rounded-2xl border border-border bg-white p-3 text-crm-navy shadow-card md:mx-0">
-                      <FakeQrCode />
-                    </div>
-                    <div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
-                        <QrCode className="h-3.5 w-3.5" /> Pix institucional CRM-MG
-                      </div>
-                      <h3 className="mt-2 font-serif text-2xl font-semibold text-foreground">
-                        Pague {fmtBRL(debito.valor)} via Pix
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Compensação imediata. Após o pagamento, a baixa ocorre em
-                        até 2 horas úteis.
-                      </p>
+                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Valor da anuidade 2026
+                </div>
+                <div className="mt-1 font-serif text-3xl font-semibold text-foreground md:text-5xl">
+                  {fmtBRL(debito.valor)}
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Vencimento em 31/03/2026.
+                </div>
 
-                      <div className="mt-4 rounded-xl border border-border bg-background p-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Pix copia e cola
-                        </div>
-                        <div className="mt-1 line-clamp-2 break-all font-mono text-xs text-foreground/80">
-                          {pixCode}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          onClick={copyPix}
-                          className="inline-flex h-11 items-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark"
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="h-4 w-4" /> Código copiado
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-4 w-4" /> Copiar código Pix
-                            </>
-                          )}
-                        </button>
-                        <button className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
-                          <Download className="h-4 w-4" /> Baixar QR code
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {tab === "boleto" && (
-                  <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-                    <div>
-                      <h3 className="font-serif text-2xl font-semibold text-foreground">
-                        Boleto bancário registrado
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Aceito em qualquer banco, lotérica ou internet banking.
-                        Compensação em até 3 dias úteis.
-                      </p>
-                      <div className="mt-4 rounded-xl border border-dashed border-border bg-secondary/30 p-3">
-                        <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Linha digitável
-                        </div>
-                        <div className="mt-1 font-mono text-sm text-foreground/85">
-                          23793.38128 60082.{debito.crm.padStart(6, "0")}1 12345.678901 1 9876{Math.floor(debito.valor * 100)}
-                        </div>
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <div className="text-xs text-muted-foreground">Valor</div>
-                          <div className="font-semibold text-foreground">
-                            {fmtBRL(debito.valor)}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Vencimento</div>
-                          <div className="font-semibold text-foreground">31/03/2026</div>
-                        </div>
-                      </div>
-                      <div className="mt-5 flex flex-wrap gap-2">
-                        <button className="inline-flex h-11 items-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark">
-                          <Download className="h-4 w-4" /> Baixar boleto (PDF)
-                        </button>
-                        <button className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
-                          <Mail className="h-4 w-4" /> Enviar por e-mail
-                        </button>
-                      </div>
-                    </div>
-                    <div className="hidden h-44 w-32 rounded-xl border border-border bg-gradient-to-b from-white to-secondary md:block">
-                      <div className="flex h-full flex-col items-center justify-end gap-1 p-3">
-                        {Array.from({ length: 22 }).map((_, i) => (
-                          <div
-                            key={i}
-                            className="h-1 w-full bg-crm-navy"
-                            style={{ opacity: (i % 3) * 0.3 + 0.2 }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {tab === "cartao" && (
+                <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <h3 className="font-serif text-2xl font-semibold text-foreground">
-                      Parcele em até 12× sem juros
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Visa, Mastercard, Elo e Hipercard. Cobrança recorrente
-                      mensal pela operadora.
-                    </p>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                      {[1, 3, 6, 12].map((n) => (
-                        <button
-                          key={n}
-                          className={`rounded-xl border p-4 text-left transition hover:border-crm-green hover:bg-crm-green-soft ${
-                            n === 12 ? "border-crm-green bg-crm-green-soft" : "border-border bg-background"
-                          }`}
-                        >
-                          <div className="text-xs text-muted-foreground">{n}×</div>
-                          <div className="font-serif text-xl font-semibold text-foreground">
-                            {fmtBRL(debito.valor / n)}
+                    <dt className="text-xs text-muted-foreground">Código do débito</dt>
+                    <dd className="font-medium text-foreground">{debito.debito_codigo}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Exercício</dt>
+                    <dd className="font-medium text-foreground">2026</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Status</dt>
+                    <dd className="font-medium text-crm-green-dark">{debito.status}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Inscrição</dt>
+                    <dd className="font-medium text-foreground">CRM {debito.crm}/MG</dd>
+                  </div>
+                </dl>
+
+                {/* Dois botões: Pix (-5%) e Boleto */}
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <button
+                    onClick={() => setMetodo("pix")}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
+                      metodo === "pix"
+                        ? "border-crm-green bg-crm-green-soft"
+                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-crm-green-dark">
+                      <QrCode className="h-4 w-4" /> Pagar com Pix
+                      <span className="rounded-full bg-crm-green px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                        -5%
+                      </span>
+                    </span>
+                    <span className="font-serif text-xl font-semibold text-foreground">
+                      {fmtBRL(valorPix)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Compensação imediata
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => setMetodo("boleto")}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
+                      metodo === "boleto"
+                        ? "border-crm-green bg-crm-green-soft"
+                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <FileText className="h-4 w-4 text-crm-green" /> Emitir boleto
+                    </span>
+                    <span className="font-serif text-xl font-semibold text-foreground">
+                      {fmtBRL(debito.valor)}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Pagável em qualquer banco
+                    </span>
+                  </button>
+                </div>
+
+                {/* Conteúdo do método escolhido */}
+                {metodo === "pix" && (
+                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
+                    <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-center">
+                      <div className="mx-auto w-40 rounded-2xl border border-border bg-white p-3 text-crm-navy shadow-card md:mx-0 md:w-44">
+                        <FakeQrCode />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+                          Pague {fmtBRL(valorPix)} via Pix
+                        </h3>
+                        <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                          Desconto de 5% aplicado. Após o pagamento a baixa ocorre em até 2 horas úteis.
+                        </p>
+                        <div className="mt-3 rounded-xl border border-border bg-secondary/30 p-3">
+                          <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                            Pix copia e cola
                           </div>
-                          <div className="mt-1 text-[11px] text-muted-foreground">
-                            Total {fmtBRL(debito.valor)}
+                          <div className="mt-1 line-clamp-2 break-all font-mono text-[11px] text-foreground/80 md:text-xs">
+                            {pixCode}
                           </div>
-                        </button>
-                      ))}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button
+                            onClick={copyPix}
+                            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none"
+                          >
+                            {copied ? (
+                              <><Check className="h-4 w-4" /> Código copiado</>
+                            ) : (
+                              <><Copy className="h-4 w-4" /> Copiar Pix</>
+                            )}
+                          </button>
+                          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
+                            <Download className="h-4 w-4" /> Baixar QR
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-crm-green px-5 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark">
-                      <CreditCard className="h-4 w-4" /> Pagar com cartão
-                    </button>
+                  </div>
+                )}
+
+                {metodo === "boleto" && (
+                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
+                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+                      Boleto bancário registrado
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                      Aceito em qualquer banco, lotérica ou internet banking. Compensação em até 3 dias úteis.
+                    </p>
+                    <div className="mt-3 rounded-xl border border-dashed border-border bg-secondary/30 p-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                        Linha digitável
+                      </div>
+                      <div className="mt-1 break-all font-mono text-[11px] text-foreground/85 md:text-sm">
+                        23793.38128 60082.{debito.crm.padStart(6, "0")}1 12345.678901 1 9876{Math.floor(debito.valor * 100)}
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-xs text-muted-foreground">Valor</div>
+                        <div className="font-semibold text-foreground">{fmtBRL(debito.valor)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Vencimento</div>
+                        <div className="font-semibold text-foreground">31/03/2026</div>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark sm:flex-none">
+                        <Download className="h-4 w-4" /> Baixar boleto (PDF)
+                      </button>
+                      <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
+                        <Mail className="h-4 w-4" /> Enviar por e-mail
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             </article>
+
 
           </div>
 
