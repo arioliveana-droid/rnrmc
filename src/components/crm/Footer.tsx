@@ -7,9 +7,6 @@ export function Footer() {
         <div className="flex flex-col items-start justify-between gap-12 md:flex-row">
           <div className="max-w-sm">
             <img src={logo.url} alt="CRM-MG" className="h-10 w-auto" width={120} height={40} />
-            <p className="mt-6 text-xs leading-relaxed text-muted-foreground">
-              Conselho Regional de Medicina de Minas Gerais. Rua dos Timbiras, 1200 — Funcionários, Belo Horizonte/MG.
-            </p>
           </div>
           <div className="grid grid-cols-2 gap-12 sm:grid-cols-3">
             <div>
@@ -33,6 +30,9 @@ export function Footer() {
               </ul>
             </div>
           </div>
+        </div>
+        <div className="mt-12 border-t border-border pt-6 text-xs leading-relaxed text-muted-foreground">
+          Conselho Regional de Medicina de Minas Gerais. Rua dos Timbiras, 1200 — Funcionários, Belo Horizonte/MG.
         </div>
       </div>
     </footer>
