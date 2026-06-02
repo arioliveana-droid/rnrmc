@@ -104,14 +104,15 @@ export function DebitoPortal({
   onLogout: () => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"pix" | "boleto" | "cartao">("pix");
+  const [metodo, setMetodo] = useState<"pix" | "boleto" | null>(null);
 
-  const parcela = debito.valor / 12;
+  const valorPix = debito.valor * 0.95;
 
   const pixCode =
     "00020126580014BR.GOV.BCB.PIX0136anuidade-" +
     debito.crm +
     "-2026@crmmg.org.br5204000053039865802BR5915CRM MINAS GERAIS6009BELO HORIZ62070503***6304A1B2";
+
 
   const copyPix = async () => {
     try {
