@@ -21,9 +21,7 @@ import {
   Receipt,
   Shield,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
-  TrendingUp,
   Wallet,
 } from "lucide-react";
 
@@ -108,8 +106,6 @@ export function DebitoPortal({
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"pix" | "boleto" | "cartao">("pix");
 
-  const desconto = useMemo(() => debito.valor * 0.05, [debito.valor]);
-  const valorAVista = debito.valor - desconto;
   const parcela = debito.valor / 12;
 
   const pixCode =
@@ -170,44 +166,36 @@ export function DebitoPortal({
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-10">
-        {/* Hero greeting */}
-        <section className="relative overflow-hidden rounded-3xl border border-crm-green/20 bg-gradient-to-br from-crm-navy via-crm-navy to-[oklch(0.28_0.06_220)] p-6 text-white shadow-elevated md:p-10">
-          <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-30 blur-3xl"
-            style={{ background: "var(--crm-green)" }}
-          />
-          <div
-            className="pointer-events-none absolute -bottom-32 -left-10 h-72 w-72 rounded-full opacity-20 blur-3xl"
-            style={{ background: "var(--crm-red)" }}
-          />
-          <div className="relative grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-end">
+        {/* Hero greeting institucional */}
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-card md:p-8">
+          <div className="grid gap-8 md:grid-cols-[1.4fr_1fr] md:items-end">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/85 backdrop-blur">
-                <Sparkles className="h-3.5 w-3.5" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+                <ShieldCheck className="h-3.5 w-3.5" />
                 Acesso autenticado · Anuidade 2026
               </div>
-              <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight md:text-5xl">
-                Olá, Dr<span className="text-white/70">(a).</span>{" "}
-                <span className="text-crm-green-soft">
+              <h1 className="mt-5 font-serif text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+                Olá, Dr<span className="text-muted-foreground">(a).</span>{" "}
+                <span className="text-crm-green-dark">
                   {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
                 </span>
               </h1>
-              <p className="mt-3 max-w-xl text-sm text-white/75 md:text-base">
-                Seu registro foi localizado na base oficial do CRM-MG. Aqui você
-                acompanha sua situação financeira, emite documentos e quita a
-                anuidade com desconto.
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                Seu registro foi localizado na base oficial do CRM-MG. Neste
+                portal você acompanha sua situação financeira, emite documentos
+                e quita a anuidade do exercício corrente.
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-crm-green/20 px-3 py-1 text-xs font-semibold text-crm-green-soft ring-1 ring-inset ring-crm-green/40">
+              <div className="mt-6 flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-crm-green-soft px-3 py-1 text-xs font-semibold text-crm-green-dark ring-1 ring-inset ring-crm-green/30">
                   <BadgeCheck className="h-3.5 w-3.5" />
                   Inscrição ativa
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/15 px-3 py-1 text-xs font-semibold text-amber-200 ring-1 ring-inset ring-amber-300/40">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
                   <Receipt className="h-3.5 w-3.5" />
                   1 débito em aberto
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 ring-1 ring-inset ring-white/15">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground ring-1 ring-inset ring-border">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   Dados verificados
                 </span>
@@ -215,33 +203,29 @@ export function DebitoPortal({
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-3 text-white">
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-white/55">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Total em aberto
                 </div>
-                <div className="mt-2 font-serif text-2xl font-semibold">{fmtBRL(debito.valor)}</div>
+                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
+                  {fmtBRL(debito.valor)}
+                </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-white/55">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Vencimento
                 </div>
-                <div className="mt-2 font-serif text-2xl font-semibold">31/03</div>
+                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
+                  31/03
+                </div>
               </div>
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-white/55">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Inscrição
                 </div>
-                <div className="mt-2 font-serif text-2xl font-semibold">
-                  {debito.crm}<span className="text-base text-white/60">/MG</span>
-                </div>
-              </div>
-              <div className="rounded-2xl border border-crm-green/30 bg-crm-green/20 p-4 backdrop-blur">
-                <div className="text-[10px] font-semibold uppercase tracking-widest text-crm-green-soft/90">
-                  À vista (-5%)
-                </div>
-                <div className="mt-2 font-serif text-2xl font-semibold text-white">
-                  {fmtBRL(valorAVista)}
+                <div className="mt-2 font-serif text-xl font-semibold text-foreground">
+                  {debito.crm}<span className="text-sm text-muted-foreground">/MG</span>
                 </div>
               </div>
             </div>
@@ -271,9 +255,8 @@ export function DebitoPortal({
                   <div className="mt-1 font-serif text-4xl font-semibold text-foreground md:text-5xl">
                     {fmtBRL(debito.valor)}
                   </div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-crm-green-soft px-2 py-1 text-xs font-semibold text-crm-green-dark">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    Economize {fmtBRL(desconto)} pagando à vista até 31/03
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Valor único da anuidade 2026. Vencimento em 31/03/2026.
                   </div>
 
                   <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
@@ -307,7 +290,7 @@ export function DebitoPortal({
                         <Check className="h-4 w-4" /> À vista (Pix/Boleto)
                       </span>
                       <span className="font-semibold text-crm-green-dark">
-                        {fmtBRL(valorAVista)}
+                        {fmtBRL(debito.valor)}
                       </span>
                     </li>
                     <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-secondary/60">
@@ -371,11 +354,11 @@ export function DebitoPortal({
                       <FakeQrCode />
                     </div>
                     <div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-crm-green-soft px-3 py-1 text-xs font-semibold text-crm-green-dark">
-                        <Sparkles className="h-3.5 w-3.5" /> Pix com desconto de 5%
+                      <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
+                        <QrCode className="h-3.5 w-3.5" /> Pix institucional CRM-MG
                       </div>
                       <h3 className="mt-2 font-serif text-2xl font-semibold text-foreground">
-                        Pague {fmtBRL(valorAVista)} via Pix
+                        Pague {fmtBRL(debito.valor)} via Pix
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Compensação imediata. Após o pagamento, a baixa ocorre em
