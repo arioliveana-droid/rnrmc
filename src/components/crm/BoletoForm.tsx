@@ -190,7 +190,7 @@ export function BoletoForm() {
                   Consultando…
                 </>
               ) : (
-                "Emitir boleto"
+              "Consultar débitos"
               )}
             </button>
 
