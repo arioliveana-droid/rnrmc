@@ -86,60 +86,27 @@ export function DebitoPortal({
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-6 md:px-6 md:py-10">
-        {/* Hero greeting institucional */}
+        {/* Hero greeting */}
         <section className="rounded-2xl border border-border bg-card p-5 shadow-card md:p-8">
-          <div className="grid gap-6 md:grid-cols-[1.4fr_1fr] md:items-end md:gap-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-crm-green-dark md:text-[11px] md:tracking-[0.2em]">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                Acesso autenticado · Anuidade 2026
-              </div>
-              <h1 className="mt-4 font-serif text-2xl font-semibold leading-tight text-foreground md:mt-5 md:text-4xl">
-                Olá, Dr<span className="text-muted-foreground">(a).</span>{" "}
-                <span className="text-crm-green-dark">
-                  {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
-                </span>
-              </h1>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                Seu registro foi localizado na base oficial do CRM-MG. Neste
-                portal você acompanha sua situação financeira, emite documentos
-                e quita a anuidade do exercício corrente.
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Anuidade 2026 · CRM-MG
               </p>
-
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-crm-green-soft px-2.5 py-1 text-[11px] font-semibold text-crm-green-dark ring-1 ring-inset ring-crm-green/30">
-                  <BadgeCheck className="h-3.5 w-3.5" />
-                  Inscrição ativa
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
-                  <Receipt className="h-3.5 w-3.5" />
-                  Débito em aberto
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Dados verificados
-                </span>
-              </div>
+              <h1 className="mt-2 font-serif text-xl font-semibold leading-tight text-foreground md:text-3xl">
+                Dr(a). {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                CRM {debito.crm}/MG
+              </p>
             </div>
-
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-2 md:gap-3">
-              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
-                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
-                  Total
-                </div>
-                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
-                  {fmtBRL(debito.valor)}
-                </div>
-              </div>
-              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
-                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
-                  Inscrição
-                </div>
-                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
-                  {debito.crm}<span className="text-xs text-muted-foreground md:text-sm">/MG</span>
-                </div>
-              </div>
+            <div className="text-left md:text-right">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Total em aberto
+              </p>
+              <p className="mt-1 font-serif text-2xl font-semibold text-foreground md:text-3xl">
+                {fmtBRL(debito.valor)}
+              </p>
             </div>
           </div>
         </section>
