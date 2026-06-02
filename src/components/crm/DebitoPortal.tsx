@@ -84,7 +84,7 @@ export function DebitoPortal({
               </div>
               <div className="hidden text-right sm:block">
                 <div className="text-xs font-semibold leading-tight text-foreground">
-                  {debito.nome.split(" ")[0]} {debito.nome.split(" ").slice(-1)[0]}
+                  {nomeFormatado(debito.nome)}
                 </div>
                 <div className="text-[10px] text-muted-foreground">CRM {debito.crm}/MG</div>
               </div>
