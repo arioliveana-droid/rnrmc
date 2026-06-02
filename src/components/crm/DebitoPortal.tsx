@@ -485,54 +485,6 @@ export function DebitoPortal({
               </div>
             </article>
 
-            {/* Histórico */}
-            <article className="rounded-2xl border border-border bg-card p-5 shadow-card md:p-6">
-              <div className="flex items-center justify-between">
-                <h3 className="font-serif text-lg font-semibold text-foreground">
-                  Histórico de anuidades
-                </h3>
-                <button className="text-xs font-semibold text-crm-green-dark hover:underline">
-                  Ver tudo
-                </button>
-              </div>
-              <ul className="mt-4 divide-y divide-border text-sm">
-                {[
-                  { ano: 2026, valor: debito.valor, status: "Em aberto", tone: "amber" },
-                  { ano: 2025, valor: 837.25, status: "Pago em 18/02/2025", tone: "green" },
-                  { ano: 2024, valor: 802.18, status: "Pago em 22/01/2024", tone: "green" },
-                  { ano: 2023, valor: 781.0, status: "Pago em 05/02/2023", tone: "green" },
-                ].map((row) => (
-                  <li
-                    key={row.ano}
-                    className="flex items-center justify-between gap-3 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-xs font-bold text-foreground">
-                        {row.ano}
-                      </div>
-                      <div>
-                        <div className="font-medium text-foreground">
-                          Anuidade {row.ano}
-                        </div>
-                        <div className="text-xs text-muted-foreground">{row.status}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="font-semibold text-foreground">{fmtBRL(row.valor)}</div>
-                      {row.tone === "green" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-crm-green-soft px-2 py-0.5 text-[11px] font-semibold text-crm-green-dark">
-                          <Check className="h-3 w-3" /> Quitado
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
-                          Em aberto
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </article>
           </div>
 
           {/* RIGHT — sidebar */}
