@@ -33,9 +33,7 @@ export function DebitoPortal({
   debito: Debito;
   onLogout: () => void;
 }) {
-  const [metodo, setMetodo] = useState<"pix" | "boleto" | null>(null);
-
-  const valorPix = debito.valor * 0.95;
+  const [mostrarBoleto, setMostrarBoleto] = useState(false);
 
   return (
     <div className="min-h-screen bg-[oklch(0.985_0.008_158)]">
