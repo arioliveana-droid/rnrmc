@@ -128,11 +128,12 @@ export function BoletoForm() {
           className="order-1 rounded-3xl border border-border bg-card p-6 shadow-elevated md:order-2 md:p-8"
         >
           <h2 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-            Dados para emissão
+            Acesse seu portal
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Preencha os campos abaixo para continuar.
+            Informe seu CRM e CPF para localizar sua anuidade.
           </p>
+
 
           <div className="mt-6 space-y-5">
             <div>
