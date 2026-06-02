@@ -4,7 +4,6 @@ import {
   Bell,
   Download,
   FileText,
-  Mail,
   QrCode,
   Wallet,
 } from "lucide-react";
@@ -135,36 +134,42 @@ export function DebitoPortal({
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   <button
                     onClick={() => setMetodo("boleto")}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
+                    className={`group relative flex flex-col items-start gap-2 rounded-xl border-2 p-5 text-left shadow-sm transition ${
                       metodo === "boleto"
-                        ? "border-crm-green bg-crm-green-soft"
-                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
+                        ? "border-crm-green bg-crm-green-soft shadow-md"
+                        : "border-border bg-background shadow-sm hover:border-crm-green/60 hover:shadow-md"
                     }`}
                   >
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <FileText className="h-4 w-4 text-crm-green" /> Emitir boleto
+                    <span className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
+                      <FileText className="h-5 w-5 text-crm-green" /> Emitir boleto
                     </span>
-                    <span className="font-serif text-xl font-semibold text-foreground">
+                    <span className="font-serif text-2xl font-bold text-foreground">
                       {fmtBRL(debito.valor)}
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Pagável em qualquer banco
                     </span>
                   </button>
 
                   <button
                     onClick={() => setMetodo("pix")}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
+                    className={`group relative flex flex-col items-start gap-2 rounded-xl border-2 p-5 text-left shadow-sm transition ${
                       metodo === "pix"
-                        ? "border-crm-green bg-crm-green-soft"
-                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
+                        ? "border-crm-green bg-crm-green-soft shadow-md"
+                        : "border-border bg-background shadow-sm hover:border-crm-green/60 hover:shadow-md"
                     }`}
                   >
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-crm-green-dark">
-                      <QrCode className="h-4 w-4" /> Pagar com Pix
-                      <span className="rounded-full bg-crm-green px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                    <span className="inline-flex items-center gap-2 text-sm font-bold text-crm-green-dark">
+                      <QrCode className="h-5 w-5" /> Pagar com Pix
+                      <span className="rounded-full bg-crm-green px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                         -5%
                       </span>
                     </span>
-                    <span className="font-serif text-xl font-semibold text-foreground">
+                    <span className="font-serif text-2xl font-bold text-foreground">
                       {fmtBRL(valorPix)}
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Compensação imediata
                     </span>
                   </button>
                 </div>
@@ -178,12 +183,9 @@ export function DebitoPortal({
                     <p className="mt-1 text-xs text-muted-foreground md:text-sm">
                       Valor: {fmtBRL(debito.valor)}.
                     </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark sm:flex-none">
-                        <Download className="h-4 w-4" /> Gerar boleto
-                      </button>
-                      <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
-                        <Mail className="h-4 w-4" /> Enviar por e-mail
+                    <div className="mt-4">
+                      <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-crm-green px-6 text-sm font-bold text-primary-foreground shadow-md hover:bg-crm-green-dark sm:w-auto">
+                        <Download className="h-5 w-5" /> Gerar boleto
                       </button>
                     </div>
                   </div>
