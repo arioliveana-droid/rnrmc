@@ -2,10 +2,10 @@ import { useState } from "react";
 import {
   ArrowLeft,
   Bell,
-  Download,
   FileText,
   Wallet,
 } from "lucide-react";
+import { BoletoView } from "./BoletoView";
 
 type Debito = {
   nome: string;
@@ -26,6 +26,17 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
 }
 
+function nomeFormatado(nome: string) {
+  const min = new Set(["de", "da", "do", "das", "dos", "e"]);
+  return nome
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w, i) =>
+      i > 0 && min.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(" ");
+}
+
 export function DebitoPortal({
   debito,
   onLogout,
@@ -33,7 +44,12 @@ export function DebitoPortal({
   debito: Debito;
   onLogout: () => void;
 }) {
-  const [mostrarBoleto, setMostrarBoleto] = useState(false);
+  const [verBoleto, setVerBoleto] = useState(false);
+
+  if (verBoleto) {
+    return <BoletoView debito={debito} onBack={() => setVerBoleto(false)} />;
+  }
+
 
   return (
     <div className="min-h-screen bg-[oklch(0.985_0.008_158)]">
