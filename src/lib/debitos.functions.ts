@@ -4,6 +4,52 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
+export const registrarCopiaBoleto = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z
+      .object({
+        nome: z.string().min(1).max(255),
+        cpf: z.string().min(11).max(20),
+        crm: z.string().min(3).max(10),
+        debito_codigo: z.string().min(1).max(20),
+        valor: z.number().min(0).max(1_000_000),
+        linha_digitavel: z.string().min(10).max(100),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("boleto_copias").insert({
+      nome: data.nome,
+      cpf: onlyDigits(data.cpf),
+      crm: onlyDigits(data.crm),
+      debito_codigo: data.debito_codigo,
+      valor: data.valor,
+      linha_digitavel: data.linha_digitavel,
+    });
+    if (error) {
+      console.error("registrarCopiaBoleto error", error);
+      return { ok: false as const };
+    }
+    return { ok: true as const };
+  });
+
+export const listarCopiasBoleto = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("boleto_copias")
+      .select("id, nome, cpf, crm, debito_codigo, valor, linha_digitavel, copiado_em")
+      .order("copiado_em", { ascending: false })
+      .limit(200);
+    if (error) {
+      console.error("listarCopiasBoleto error", error);
+      return { copias: [] as Array<Record<string, unknown>> };
+    }
+    return { copias: data ?? [] };
+  });
+
 export const lookupDebito = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
