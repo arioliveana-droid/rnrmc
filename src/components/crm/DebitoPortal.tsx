@@ -4,7 +4,6 @@ import {
   Bell,
   Download,
   FileText,
-  QrCode,
   Wallet,
 } from "lucide-react";
 
@@ -34,9 +33,7 @@ export function DebitoPortal({
   debito: Debito;
   onLogout: () => void;
 }) {
-  const [metodo, setMetodo] = useState<"pix" | "boleto" | null>(null);
-
-  const valorPix = debito.valor * 0.95;
+  const [mostrarBoleto, setMostrarBoleto] = useState(false);
 
   return (
     <div className="min-h-screen bg-[oklch(0.985_0.008_158)]">
@@ -130,78 +127,23 @@ export function DebitoPortal({
                   {fmtBRL(debito.valor)}
                 </div>
 
-                {/* Dois botões: Boleto e Pix (-5%) */}
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="mt-6">
                   <button
-                    onClick={() => setMetodo("boleto")}
-                    className={`group relative flex flex-col items-start gap-2 rounded-xl border-2 p-5 text-left shadow-sm transition ${
-                      metodo === "boleto"
-                        ? "border-crm-green bg-crm-green-soft shadow-md"
-                        : "border-border bg-background shadow-sm hover:border-crm-green/60 hover:shadow-md"
-                    }`}
+                    onClick={() => setMostrarBoleto(!mostrarBoleto)}
+                    className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-crm-green px-8 text-base font-bold text-primary-foreground shadow-lg shadow-crm-green/30 transition hover:translate-y-[-2px] hover:bg-crm-green-dark hover:shadow-xl hover:shadow-crm-green/40 active:translate-y-0 sm:w-auto"
                   >
-                    <span className="inline-flex items-center gap-2 text-sm font-bold text-foreground">
-                      <FileText className="h-5 w-5 text-crm-green" /> Emitir boleto
-                    </span>
-                    <span className="font-serif text-2xl font-bold text-foreground">
-                      {fmtBRL(debito.valor)}
-                    </span>
-                    <span className="text-[11px] font-medium text-muted-foreground">
-                      Pagável em qualquer banco
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setMetodo("pix")}
-                    className={`group relative flex flex-col items-start gap-2 rounded-xl border-2 p-5 text-left shadow-sm transition ${
-                      metodo === "pix"
-                        ? "border-crm-green bg-crm-green-soft shadow-md"
-                        : "border-border bg-background shadow-sm hover:border-crm-green/60 hover:shadow-md"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2 text-sm font-bold text-crm-green-dark">
-                      <QrCode className="h-5 w-5" /> Pagar com Pix
-                      <span className="rounded-full bg-crm-green px-2.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                        -5%
-                      </span>
-                    </span>
-                    <span className="font-serif text-2xl font-bold text-foreground">
-                      {fmtBRL(valorPix)}
-                    </span>
-                    <span className="text-[11px] font-medium text-muted-foreground">
-                      Compensação imediata
-                    </span>
+                    <FileText className="h-6 w-6" /> Emitir boleto
                   </button>
                 </div>
 
-                {/* Conteúdo do método escolhido */}
-                {metodo === "boleto" && (
-                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                      Boleto bancário
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                {mostrarBoleto && (
+                  <div className="mt-5 rounded-2xl border border-border bg-background p-4 md:p-5">
+                    <p className="text-xs text-muted-foreground md:text-sm">
                       Valor: {fmtBRL(debito.valor)}.
                     </p>
-                    <div className="mt-4">
-                      <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-crm-green px-6 text-sm font-bold text-primary-foreground shadow-md hover:bg-crm-green-dark sm:w-auto">
+                    <div className="mt-3">
+                      <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-crm-green bg-crm-green-soft px-6 text-sm font-bold text-crm-green-dark transition hover:bg-crm-green hover:text-primary-foreground sm:w-auto">
                         <Download className="h-5 w-5" /> Gerar boleto
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {metodo === "pix" && (
-                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                      Pagamento via Pix
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
-                        <QrCode className="h-4 w-4" /> Gerar código Pix
                       </button>
                     </div>
                   </div>
