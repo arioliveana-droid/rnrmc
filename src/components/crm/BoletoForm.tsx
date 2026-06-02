@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { FileText, Lock, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { lookupDebito } from "@/lib/debitos.functions";
 
 function maskCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -28,15 +30,29 @@ function isValidCpf(cpf: string) {
   return r === parseInt(d[10]);
 }
 
+type Debito = {
+  nome: string;
+  cpf: string;
+  crm: string;
+  codigo: string | null;
+  status: string;
+  debito_codigo: string;
+  descricao: string;
+  valor: number;
+};
+
 export function BoletoForm() {
   const [crm, setCrm] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debito, setDebito] = useState<Debito | null>(null);
+  const lookup = useServerFn(lookupDebito);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setDebito(null);
 
     if (crm.length < 4) {
       setError("Informe um número de CRM válido.");
@@ -48,13 +64,22 @@ export function BoletoForm() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await lookup({ data: { cpf, crm } });
+      if (!res.found) {
+        setError(res.error ?? "Registro não encontrado.");
+      } else {
+        setDebito(res.debito as Debito);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao consultar.");
+    } finally {
       setLoading(false);
-      alert(
-        `Boleto da anuidade 2026 gerado para o CRM ${crm}.\n\nEm produção, redirecionaríamos para o PDF do boleto / Pix.`,
-      );
-    }, 1200);
+    }
   };
+
+  const formatCurrency = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
     <section id="emitir" className="bg-background py-12 md:py-20">
@@ -143,6 +168,46 @@ export function BoletoForm() {
                 className="rounded-lg border border-crm-red/30 bg-crm-red/5 px-3 py-2 text-sm text-crm-red-dark"
               >
                 {error}
+              </div>
+            )}
+
+            {debito && (
+              <div className="rounded-xl border border-crm-green/30 bg-crm-green/5 p-4 text-sm">
+                <div className="flex items-center gap-2 font-semibold text-crm-green-dark">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Débito localizado
+                </div>
+                <dl className="mt-3 space-y-1.5 text-foreground/85">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Nome</dt>
+                    <dd className="text-right font-medium">{debito.nome}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">CRM</dt>
+                    <dd className="font-medium">{debito.crm}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-muted-foreground">Descrição</dt>
+                    <dd className="font-medium">{debito.descricao}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3 border-t border-crm-green/20 pt-2">
+                    <dt className="text-muted-foreground">Valor</dt>
+                    <dd className="text-lg font-semibold text-crm-green-dark">
+                      {formatCurrency(debito.valor)}
+                    </dd>
+                  </div>
+                </dl>
+                <button
+                  type="button"
+                  onClick={() =>
+                    alert(
+                      `Boleto da ${debito.descricao} no valor de ${formatCurrency(debito.valor)} gerado para o CRM ${debito.crm}.\n\nEm produção, redirecionaríamos para o PDF do boleto / Pix.`,
+                    )
+                  }
+                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg bg-crm-green font-semibold text-primary-foreground hover:bg-crm-green-dark"
+                >
+                  Gerar boleto
+                </button>
               </div>
             )}
 
