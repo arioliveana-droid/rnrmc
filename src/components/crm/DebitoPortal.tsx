@@ -4,7 +4,6 @@ import {
   Bell,
   Download,
   FileText,
-  Mail,
   QrCode,
   Wallet,
 } from "lucide-react";
