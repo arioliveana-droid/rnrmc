@@ -31,8 +31,13 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-12 border-t border-border pt-6 text-xs leading-relaxed text-muted-foreground">
-          Conselho Regional de Medicina de Minas Gerais. Rua dos Timbiras, 1200 — Funcionários, Belo Horizonte/MG.
+        <div className="mt-16 border-t border-border pt-10 text-center">
+          <p className="text-sm font-semibold tracking-wide text-foreground">
+            Conselho Regional de Medicina de Minas Gerais
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Rua dos Timbiras, 1200 — Funcionários, Belo Horizonte/MG
+          </p>
         </div>
       </div>
     </footer>
