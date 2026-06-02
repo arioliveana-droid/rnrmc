@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { FileText, Lock, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { lookupDebito } from "@/lib/debitos.functions";
 
 function maskCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -28,15 +30,29 @@ function isValidCpf(cpf: string) {
   return r === parseInt(d[10]);
 }
 
+type Debito = {
+  nome: string;
+  cpf: string;
+  crm: string;
+  codigo: string | null;
+  status: string;
+  debito_codigo: string;
+  descricao: string;
+  valor: number;
+};
+
 export function BoletoForm() {
   const [crm, setCrm] = useState("");
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debito, setDebito] = useState<Debito | null>(null);
+  const lookup = useServerFn(lookupDebito);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setDebito(null);
 
     if (crm.length < 4) {
       setError("Informe um número de CRM válido.");
@@ -48,13 +64,22 @@ export function BoletoForm() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await lookup({ data: { cpf, crm } });
+      if (!res.found) {
+        setError(res.error ?? "Registro não encontrado.");
+      } else {
+        setDebito(res.debito as Debito);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao consultar.");
+    } finally {
       setLoading(false);
-      alert(
-        `Boleto da anuidade 2026 gerado para o CRM ${crm}.\n\nEm produção, redirecionaríamos para o PDF do boleto / Pix.`,
-      );
-    }, 1200);
+    }
   };
+
+  const formatCurrency = (v: number) =>
+    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
     <section id="emitir" className="bg-background py-12 md:py-20">
