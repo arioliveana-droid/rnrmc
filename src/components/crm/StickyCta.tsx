@@ -7,7 +7,7 @@ export function StickyCta() {
             Anuidade 2026 · à vista
           </div>
           <div className="truncate font-serif text-lg font-semibold text-foreground">
-            R$ 837,25 <span className="text-xs font-medium text-crm-green">−15%</span>
+            R$ 837,25
           </div>
         </div>
         <a
