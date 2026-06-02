@@ -68,8 +68,6 @@ export function BoletoForm() {
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
             Informe seu CRM e CPF para gerar o boleto ou o Pix da anuidade 2026 do CRM-MG.
-            Pague à vista com até <strong className="text-crm-green-dark">15% de desconto</strong>{" "}
-            ou parcele em até 5x sem juros.
           </p>
 
           <ul className="mt-8 space-y-4 text-sm">
