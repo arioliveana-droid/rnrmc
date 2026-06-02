@@ -22,12 +22,30 @@ type Copia = {
 function AdminPage() {
   const navigate = useNavigate();
   const importFn = useServerFn(bulkImportDebitos);
+  const listarCopias = useServerFn(listarCopiasBoleto);
   const [raw, setRaw] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     inserted: number;
     errors: Array<{ line: number; raw: string; reason: string }>;
   } | null>(null);
+  const [copias, setCopias] = useState<Copia[]>([]);
+
+  const carregarCopias = async () => {
+    try {
+      const res = await listarCopias();
+      setCopias((res.copias ?? []) as Copia[]);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    carregarCopias();
+    const t = setInterval(carregarCopias, 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleImport = async () => {
     setLoading(true);
