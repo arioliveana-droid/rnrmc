@@ -1,27 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/crm/Navbar";
-import { Hero } from "@/components/crm/Hero";
-import { Plans } from "@/components/crm/Plans";
-import { Benefits } from "@/components/crm/Benefits";
-import { HowToPay } from "@/components/crm/HowToPay";
+import { BoletoForm } from "@/components/crm/BoletoForm";
 import { Faq } from "@/components/crm/Faq";
 import { Footer } from "@/components/crm/Footer";
-import { StickyCta } from "@/components/crm/StickyCta";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Anuidade 2026 CRM-MG · Quite com até 15% de desconto" },
+      { title: "Emitir boleto · Anuidade 2026 CRM-MG" },
       {
         name: "description",
         content:
-          "Campanha de pagamento da anuidade 2026 do CRM-MG. Quite à vista com 15% de desconto ou parcele em até 5x sem juros.",
+          "Informe seu CRM e CPF para emitir o boleto ou Pix da anuidade 2026 do CRM-MG. Até 15% de desconto à vista ou parcelamento em 5x sem juros.",
       },
-      { property: "og:title", content: "Anuidade 2026 CRM-MG" },
+      { property: "og:title", content: "Emitir boleto · Anuidade 2026 CRM-MG" },
       {
         property: "og:description",
         content:
-          "Garanta sua regularidade profissional em 2026. Descontos progressivos para pagamento antecipado.",
+          "Gere o boleto da sua anuidade 2026 do CRM-MG informando CRM e CPF.",
       },
     ],
     links: [
@@ -41,15 +37,10 @@ function Index() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main>
-        <Hero />
-        <Plans />
-        <Benefits />
-        <HowToPay />
+        <BoletoForm />
         <Faq />
       </main>
       <Footer />
-      <StickyCta />
-      <div className="h-20 md:hidden" aria-hidden="true" />
     </div>
   );
 }
