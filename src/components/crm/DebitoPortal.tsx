@@ -102,7 +102,7 @@ export function DebitoPortal({
                 Anuidade 2026 · CRM-MG
               </p>
               <h1 className="mt-2 font-serif text-xl font-semibold leading-tight text-foreground md:text-3xl">
-                Dr(a). {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+                Dr(a). {nomeFormatado(debito.nome)}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 CRM {debito.crm}/MG
