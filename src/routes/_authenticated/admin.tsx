@@ -1,12 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { bulkImportDebitos } from "@/lib/debitos.functions";
+import { useEffect, useState } from "react";
+import { bulkImportDebitos, listarCopiasBoleto } from "@/lib/debitos.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
+
+type Copia = {
+  id: string;
+  nome: string;
+  cpf: string;
+  crm: string;
+  debito_codigo: string;
+  valor: number;
+  linha_digitavel: string;
+  copiado_em: string;
+};
 
 function AdminPage() {
   const navigate = useNavigate();
