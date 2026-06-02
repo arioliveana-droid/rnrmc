@@ -21,9 +21,7 @@ import {
   Receipt,
   Shield,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
-  TrendingUp,
   Wallet,
 } from "lucide-react";
 
