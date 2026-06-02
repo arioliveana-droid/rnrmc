@@ -354,11 +354,11 @@ export function DebitoPortal({
                       <FakeQrCode />
                     </div>
                     <div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-crm-green-soft px-3 py-1 text-xs font-semibold text-crm-green-dark">
-                        <Sparkles className="h-3.5 w-3.5" /> Pix com desconto de 5%
+                      <div className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">
+                        <QrCode className="h-3.5 w-3.5" /> Pix institucional CRM-MG
                       </div>
                       <h3 className="mt-2 font-serif text-2xl font-semibold text-foreground">
-                        Pague {fmtBRL(valorAVista)} via Pix
+                        Pague {fmtBRL(debito.valor)} via Pix
                       </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
                         Compensação imediata. Após o pagamento, a baixa ocorre em
