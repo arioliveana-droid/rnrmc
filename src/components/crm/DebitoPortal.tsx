@@ -225,22 +225,6 @@ export function DebitoPortal({
                 </div>
 
                 {/* Conteúdo do método escolhido */}
-                {metodo === "pix" && (
-                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                      Pagamento via Pix
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
-                        <QrCode className="h-4 w-4" /> Gerar código Pix
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {metodo === "boleto" && (
                   <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
                     <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
@@ -255,6 +239,22 @@ export function DebitoPortal({
                       </button>
                       <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
                         <Mail className="h-4 w-4" /> Enviar por e-mail
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {metodo === "pix" && (
+                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
+                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+                      Pagamento via Pix
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
+                        <QrCode className="h-4 w-4" /> Gerar código Pix
                       </button>
                     </div>
                   </div>
