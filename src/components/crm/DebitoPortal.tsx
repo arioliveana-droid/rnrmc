@@ -135,21 +135,13 @@ export function DebitoPortal({
             </div>
 
             {/* Quick stats */}
-            <div className="grid grid-cols-3 gap-2 md:gap-3">
+            <div className="grid grid-cols-2 gap-2 md:gap-3">
               <div className="rounded-xl border border-border bg-background p-3 md:p-4">
                 <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
                   Total
                 </div>
                 <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
                   {fmtBRL(debito.valor)}
-                </div>
-              </div>
-              <div className="rounded-xl border border-border bg-background p-3 md:p-4">
-                <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground md:text-[10px] md:tracking-widest">
-                  Vencimento
-                </div>
-                <div className="mt-1.5 font-serif text-base font-semibold text-foreground md:mt-2 md:text-xl">
-                  31/03
                 </div>
               </div>
               <div className="rounded-xl border border-border bg-background p-3 md:p-4">
