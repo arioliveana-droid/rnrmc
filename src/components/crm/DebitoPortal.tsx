@@ -255,9 +255,8 @@ export function DebitoPortal({
                   <div className="mt-1 font-serif text-4xl font-semibold text-foreground md:text-5xl">
                     {fmtBRL(debito.valor)}
                   </div>
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-crm-green-soft px-2 py-1 text-xs font-semibold text-crm-green-dark">
-                    <TrendingUp className="h-3.5 w-3.5" />
-                    Economize {fmtBRL(desconto)} pagando à vista até 31/03
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Valor único da anuidade 2026. Vencimento em 31/03/2026.
                   </div>
 
                   <dl className="mt-5 grid grid-cols-2 gap-3 text-sm">
