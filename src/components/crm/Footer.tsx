@@ -34,9 +34,8 @@ export function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-12 flex flex-col items-start justify-between gap-2 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
+        <div className="mt-12 border-t border-border pt-6 text-xs text-muted-foreground">
           <span>© 2026 CRM-MG · Todos os direitos reservados.</span>
-          <span className="uppercase tracking-widest">Campanha Anuidade 2026</span>
         </div>
       </div>
     </footer>
