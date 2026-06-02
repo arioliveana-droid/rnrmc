@@ -4,10 +4,10 @@ export function StickyCta() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Anuidade 2026 · à vista
+            Anuidade 2026
           </div>
           <div className="truncate font-serif text-lg font-semibold text-foreground">
-            R$ 837,25
+            R$ 902,00
           </div>
         </div>
         <a
