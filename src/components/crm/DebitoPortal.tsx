@@ -2,10 +2,10 @@ import { useState } from "react";
 import {
   ArrowLeft,
   Bell,
-  Download,
   FileText,
   Wallet,
 } from "lucide-react";
+import { BoletoView } from "./BoletoView";
 
 type Debito = {
   nome: string;
@@ -26,6 +26,17 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
 }
 
+function nomeFormatado(nome: string) {
+  const min = new Set(["de", "da", "do", "das", "dos", "e"]);
+  return nome
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w, i) =>
+      i > 0 && min.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1),
+    )
+    .join(" ");
+}
+
 export function DebitoPortal({
   debito,
   onLogout,
@@ -33,7 +44,12 @@ export function DebitoPortal({
   debito: Debito;
   onLogout: () => void;
 }) {
-  const [mostrarBoleto, setMostrarBoleto] = useState(false);
+  const [verBoleto, setVerBoleto] = useState(false);
+
+  if (verBoleto) {
+    return <BoletoView debito={debito} onBack={() => setVerBoleto(false)} />;
+  }
+
 
   return (
     <div className="min-h-screen bg-[oklch(0.985_0.008_158)]">
@@ -68,7 +84,7 @@ export function DebitoPortal({
               </div>
               <div className="hidden text-right sm:block">
                 <div className="text-xs font-semibold leading-tight text-foreground">
-                  {debito.nome.split(" ")[0]} {debito.nome.split(" ").slice(-1)[0]}
+                  {nomeFormatado(debito.nome)}
                 </div>
                 <div className="text-[10px] text-muted-foreground">CRM {debito.crm}/MG</div>
               </div>
@@ -86,7 +102,7 @@ export function DebitoPortal({
                 Anuidade 2026 · CRM-MG
               </p>
               <h1 className="mt-2 font-serif text-xl font-semibold leading-tight text-foreground md:text-3xl">
-                Dr(a). {debito.nome.split(" ")[0].toLowerCase().replace(/^./, (c) => c.toUpperCase())}
+                Dr(a). {nomeFormatado(debito.nome)}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 CRM {debito.crm}/MG
@@ -129,25 +145,12 @@ export function DebitoPortal({
 
                 <div className="mt-6">
                   <button
-                    onClick={() => setMostrarBoleto(!mostrarBoleto)}
+                    onClick={() => setVerBoleto(true)}
                     className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-crm-green px-8 text-base font-bold text-primary-foreground shadow-lg shadow-crm-green/30 transition hover:translate-y-[-2px] hover:bg-crm-green-dark hover:shadow-xl hover:shadow-crm-green/40 active:translate-y-0 sm:w-auto"
                   >
                     <FileText className="h-6 w-6" /> Emitir boleto
                   </button>
                 </div>
-
-                {mostrarBoleto && (
-                  <div className="mt-5 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <p className="text-xs text-muted-foreground md:text-sm">
-                      Valor: {fmtBRL(debito.valor)}.
-                    </p>
-                    <div className="mt-3">
-                      <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-crm-green bg-crm-green-soft px-6 text-sm font-bold text-crm-green-dark transition hover:bg-crm-green hover:text-primary-foreground sm:w-auto">
-                        <Download className="h-5 w-5" /> Gerar boleto
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </article>
 

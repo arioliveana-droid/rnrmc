@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      boleto_copias: {
+        Row: {
+          copiado_em: string
+          cpf: string
+          crm: string
+          debito_codigo: string
+          id: string
+          linha_digitavel: string
+          nome: string
+          valor: number
+        }
+        Insert: {
+          copiado_em?: string
+          cpf: string
+          crm: string
+          debito_codigo: string
+          id?: string
+          linha_digitavel: string
+          nome: string
+          valor: number
+        }
+        Update: {
+          copiado_em?: string
+          cpf?: string
+          crm?: string
+          debito_codigo?: string
+          id?: string
+          linha_digitavel?: string
+          nome?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       debitos: {
         Row: {
           codigo: string | null
