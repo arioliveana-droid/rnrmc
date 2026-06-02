@@ -8,7 +8,6 @@ import {
   Calendar,
   Check,
   Copy,
-  Copy,
   Download,
   FileText,
   GraduationCap,
