@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      debitos: {
+        Row: {
+          codigo: string | null
+          cpf: string
+          created_at: string
+          crm: string
+          debito_codigo: string
+          descricao: string
+          id: string
+          nome: string
+          status: string
+          valor: number
+        }
+        Insert: {
+          codigo?: string | null
+          cpf: string
+          created_at?: string
+          crm: string
+          debito_codigo: string
+          descricao: string
+          id?: string
+          nome: string
+          status?: string
+          valor?: number
+        }
+        Update: {
+          codigo?: string | null
+          cpf?: string
+          created_at?: string
+          crm?: string
+          debito_codigo?: string
+          descricao?: string
+          id?: string
+          nome?: string
+          status?: string
+          valor?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
