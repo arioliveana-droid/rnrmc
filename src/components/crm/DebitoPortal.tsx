@@ -290,7 +290,7 @@ export function DebitoPortal({
                         <Check className="h-4 w-4" /> À vista (Pix/Boleto)
                       </span>
                       <span className="font-semibold text-crm-green-dark">
-                        {fmtBRL(valorAVista)}
+                        {fmtBRL(debito.valor)}
                       </span>
                     </li>
                     <li className="flex items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-secondary/60">
