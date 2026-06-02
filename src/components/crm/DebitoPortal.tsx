@@ -8,6 +8,7 @@ import {
   FileText,
   Mail,
   QrCode,
+  Receipt,
   ShieldCheck,
   Stethoscope,
   Wallet,
