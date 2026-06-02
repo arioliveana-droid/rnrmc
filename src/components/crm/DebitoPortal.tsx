@@ -670,9 +670,47 @@ export function DebitoPortal({
           </aside>
         </section>
 
-        <footer className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          CRM-MG · Conselho Regional de Medicina do Estado de Minas Gerais ·
-          Portal seguro
+        {/* Footer institucional */}
+        <footer className="mt-10 border-t border-border">
+          <div className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+                Institucional
+              </div>
+              <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+                <li>Sobre o CRM-MG</li>
+                <li>Conselheiros e diretoria</li>
+                <li>Normas e ética médica</li>
+                <li>Transparência</li>
+              </ul>
+            </div>
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+                Atendimento
+              </div>
+              <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+                <li>Fale com o CRM-MG</li>
+                <li>Ouvidoria</li>
+                <li>Canal de denúncias</li>
+                <li>Perguntas frequentes</li>
+              </ul>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+                Endereço
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Conselho Regional de Medicina de Minas Gerais
+                <br />
+                Rua dos Timbiras, 1200 — Funcionários
+                <br />
+                Belo Horizonte / MG
+              </p>
+            </div>
+          </div>
+          <div className="border-t border-border py-4 text-center text-[11px] text-muted-foreground">
+            CRM-MG · Conselho Regional de Medicina de Minas Gerais · Portal seguro
+          </div>
         </footer>
       </main>
     </div>
