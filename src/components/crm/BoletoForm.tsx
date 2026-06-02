@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { FileText, Lock, ShieldCheck, Loader2, CheckCircle2 } from "lucide-react";
+import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupDebito } from "@/lib/debitos.functions";
+import { DebitoPortal } from "./DebitoPortal";
 
 function maskCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -80,6 +81,11 @@ export function BoletoForm() {
 
   const formatCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  void formatCurrency;
+
+  if (debito) {
+    return <DebitoPortal debito={debito} onLogout={() => { setDebito(null); setCrm(""); setCpf(""); }} />;
+  }
 
   return (
     <section id="emitir" className="bg-background py-12 md:py-20">
@@ -171,45 +177,6 @@ export function BoletoForm() {
               </div>
             )}
 
-            {debito && (
-              <div className="rounded-xl border border-crm-green/30 bg-crm-green/5 p-4 text-sm">
-                <div className="flex items-center gap-2 font-semibold text-crm-green-dark">
-                  <CheckCircle2 className="h-4 w-4" />
-                  Débito localizado
-                </div>
-                <dl className="mt-3 space-y-1.5 text-foreground/85">
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">Nome</dt>
-                    <dd className="text-right font-medium">{debito.nome}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">CRM</dt>
-                    <dd className="font-medium">{debito.crm}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <dt className="text-muted-foreground">Descrição</dt>
-                    <dd className="font-medium">{debito.descricao}</dd>
-                  </div>
-                  <div className="flex justify-between gap-3 border-t border-crm-green/20 pt-2">
-                    <dt className="text-muted-foreground">Valor</dt>
-                    <dd className="text-lg font-semibold text-crm-green-dark">
-                      {formatCurrency(debito.valor)}
-                    </dd>
-                  </div>
-                </dl>
-                <button
-                  type="button"
-                  onClick={() =>
-                    alert(
-                      `Boleto da ${debito.descricao} no valor de ${formatCurrency(debito.valor)} gerado para o CRM ${debito.crm}.\n\nEm produção, redirecionaríamos para o PDF do boleto / Pix.`,
-                    )
-                  }
-                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg bg-crm-green font-semibold text-primary-foreground hover:bg-crm-green-dark"
-                >
-                  Gerar boleto
-                </button>
-              </div>
-            )}
 
             <button
               type="submit"
