@@ -133,6 +133,50 @@ ANNA CAROLLYNE SANTOS PINTO:11075980607:105866:POSITIVO:A26:ANUIDADE 2026`}
             )}
           </div>
         )}
+
+        <div className="mt-10">
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-foreground">
+                Cópias do código de barras
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Médicos que copiaram o código do boleto (atualiza a cada 15s).
+              </p>
+            </div>
+            <button
+              onClick={carregarCopias}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+            >
+              Atualizar
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+            {copias.length === 0 ? (
+              <p className="p-6 text-center text-sm text-muted-foreground">
+                Nenhuma cópia registrada ainda.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {copias.map((c) => (
+                  <li key={c.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{c.nome}</div>
+                      <div className="text-xs text-muted-foreground">
+                        CRM {c.crm}/MG · CPF {c.cpf} · {c.debito_codigo}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground sm:text-right">
+                      <div className="font-mono">R$ {Number(c.valor).toFixed(2)}</div>
+                      <div>{new Date(c.copiado_em).toLocaleString("pt-BR")}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
