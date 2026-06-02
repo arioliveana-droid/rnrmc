@@ -11,10 +11,6 @@ const faq = [
     q: "Até quando posso pagar com 15% de desconto?",
     a: "O desconto máximo é válido exclusivamente para pagamentos em cota única até 31/01/2026.",
   },
-  {
-    q: "Posso parcelar no cartão de crédito?",
-    a: "Sim, em até 5x sem juros no cartão de crédito, ou em até 5 boletos mensais.",
-  },
 ];
 
 export function Faq() {
