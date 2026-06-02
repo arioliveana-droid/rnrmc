@@ -32,10 +32,10 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-16 border-t border-border pt-10 text-center">
-          <p className="text-sm font-semibold tracking-wide text-foreground">
+          <p className="text-xs font-semibold tracking-wide whitespace-nowrap text-foreground">
             Conselho Regional de Medicina de Minas Gerais
           </p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
             Rua dos Timbiras, 1200 — Funcionários, Belo Horizonte/MG
           </p>
         </div>
