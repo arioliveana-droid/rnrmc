@@ -6,6 +6,7 @@ import { Benefits } from "@/components/crm/Benefits";
 import { HowToPay } from "@/components/crm/HowToPay";
 import { Faq } from "@/components/crm/Faq";
 import { Footer } from "@/components/crm/Footer";
+import { StickyCta } from "@/components/crm/StickyCta";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -47,6 +48,8 @@ function Index() {
         <Faq />
       </main>
       <Footer />
+      <StickyCta />
+      <div className="h-20 md:hidden" aria-hidden="true" />
     </div>
   );
 }
