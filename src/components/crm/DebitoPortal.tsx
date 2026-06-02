@@ -125,7 +125,7 @@ export function DebitoPortal({
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 ring-1 ring-inset ring-amber-200">
                   <Receipt className="h-3.5 w-3.5" />
-                  1 débito em aberto
+                  Débito em aberto
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground ring-1 ring-inset ring-border">
                   <ShieldCheck className="h-3.5 w-3.5" />
