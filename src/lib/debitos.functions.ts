@@ -45,7 +45,7 @@ export const listarCopiasBoleto = createServerFn({ method: "GET" })
       .limit(200);
     if (error) {
       console.error("listarCopiasBoleto error", error);
-      return { copias: [] as Array<Record<string, unknown>> };
+      return { copias: [] };
     }
     return { copias: data ?? [] };
   });
