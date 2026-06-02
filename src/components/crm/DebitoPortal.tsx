@@ -32,11 +32,6 @@ function initials(name: string) {
   return ((parts[0]?.[0] ?? "") + (parts[parts.length - 1]?.[0] ?? "")).toUpperCase();
 }
 
-function maskCpfDisplay(cpf: string) {
-  const d = cpf.replace(/\D/g, "").padStart(11, "0");
-  return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
-}
-
 export function DebitoPortal({
   debito,
   onLogout,
