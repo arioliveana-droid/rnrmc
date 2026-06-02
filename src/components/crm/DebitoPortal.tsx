@@ -1,15 +1,11 @@
 import { useState } from "react";
 import {
   ArrowLeft,
-  BadgeCheck,
   Bell,
-  Check,
   Download,
   FileText,
   Mail,
   QrCode,
-  Receipt,
-  ShieldCheck,
   Wallet,
 } from "lucide-react";
 
