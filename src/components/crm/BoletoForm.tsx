@@ -111,7 +111,7 @@ export function BoletoForm() {
             <li className="flex items-start gap-3">
               <FileText className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
               <span className="text-foreground/85">
-                Boleto, Pix copia-e-cola e opção de parcelamento no cartão.
+                Boleto e Pix copia-e-cola com desconto de 5%.
               </span>
             </li>
             <li className="flex items-start gap-3">
