@@ -186,8 +186,24 @@ export function DebitoPortal({
                   </div>
                 </dl>
 
-                {/* Dois botões: Pix (-5%) e Boleto */}
+                {/* Dois botões: Boleto e Pix (-5%) */}
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <button
+                    onClick={() => setMetodo("boleto")}
+                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
+                      metodo === "boleto"
+                        ? "border-crm-green bg-crm-green-soft"
+                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <FileText className="h-4 w-4 text-crm-green" /> Emitir boleto
+                    </span>
+                    <span className="font-serif text-xl font-semibold text-foreground">
+                      {fmtBRL(debito.valor)}
+                    </span>
+                  </button>
+
                   <button
                     onClick={() => setMetodo("pix")}
                     className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
@@ -206,41 +222,9 @@ export function DebitoPortal({
                       {fmtBRL(valorPix)}
                     </span>
                   </button>
-
-                  <button
-                    onClick={() => setMetodo("boleto")}
-                    className={`flex flex-col items-start gap-1 rounded-xl border p-4 text-left transition ${
-                      metodo === "boleto"
-                        ? "border-crm-green bg-crm-green-soft"
-                        : "border-border bg-background hover:border-crm-green hover:bg-crm-green-soft/60"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <FileText className="h-4 w-4 text-crm-green" /> Emitir boleto
-                    </span>
-                    <span className="font-serif text-xl font-semibold text-foreground">
-                      {fmtBRL(debito.valor)}
-                    </span>
-                  </button>
                 </div>
 
                 {/* Conteúdo do método escolhido */}
-                {metodo === "pix" && (
-                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
-                      Pagamento via Pix
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
-                        <QrCode className="h-4 w-4" /> Gerar código Pix
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {metodo === "boleto" && (
                   <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
                     <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
@@ -255,6 +239,22 @@ export function DebitoPortal({
                       </button>
                       <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary">
                         <Mail className="h-4 w-4" /> Enviar por e-mail
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {metodo === "pix" && (
+                  <div className="mt-6 rounded-2xl border border-border bg-background p-4 md:p-5">
+                    <h3 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+                      Pagamento via Pix
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+                      Valor com desconto de 5%: {fmtBRL(valorPix)}.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark sm:flex-none">
+                        <QrCode className="h-4 w-4" /> Gerar código Pix
                       </button>
                     </div>
                   </div>
