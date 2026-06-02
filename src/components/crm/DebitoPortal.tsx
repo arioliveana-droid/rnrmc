@@ -106,8 +106,6 @@ export function DebitoPortal({
   const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState<"pix" | "boleto" | "cartao">("pix");
 
-  const desconto = useMemo(() => debito.valor * 0.05, [debito.valor]);
-  const valorAVista = debito.valor - desconto;
   const parcela = debito.valor / 12;
 
   const pixCode =
