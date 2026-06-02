@@ -145,25 +145,12 @@ export function DebitoPortal({
 
                 <div className="mt-6">
                   <button
-                    onClick={() => setMostrarBoleto(!mostrarBoleto)}
+                    onClick={() => setVerBoleto(true)}
                     className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-crm-green px-8 text-base font-bold text-primary-foreground shadow-lg shadow-crm-green/30 transition hover:translate-y-[-2px] hover:bg-crm-green-dark hover:shadow-xl hover:shadow-crm-green/40 active:translate-y-0 sm:w-auto"
                   >
                     <FileText className="h-6 w-6" /> Emitir boleto
                   </button>
                 </div>
-
-                {mostrarBoleto && (
-                  <div className="mt-5 rounded-2xl border border-border bg-background p-4 md:p-5">
-                    <p className="text-xs text-muted-foreground md:text-sm">
-                      Valor: {fmtBRL(debito.valor)}.
-                    </p>
-                    <div className="mt-3">
-                      <button className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-crm-green bg-crm-green-soft px-6 text-sm font-bold text-crm-green-dark transition hover:bg-crm-green hover:text-primary-foreground sm:w-auto">
-                        <Download className="h-5 w-5" /> Gerar boleto
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </article>
 
