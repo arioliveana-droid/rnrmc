@@ -1,0 +1,175 @@
+import { useState } from "react";
+import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
+
+function maskCpf(v: string) {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function maskCrm(v: string) {
+  return v.replace(/\D/g, "").slice(0, 7);
+}
+
+function isValidCpf(cpf: string) {
+  const d = cpf.replace(/\D/g, "");
+  if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+  let s = 0;
+  for (let i = 0; i < 9; i++) s += parseInt(d[i]) * (10 - i);
+  let r = (s * 10) % 11;
+  if (r === 10) r = 0;
+  if (r !== parseInt(d[9])) return false;
+  s = 0;
+  for (let i = 0; i < 10; i++) s += parseInt(d[i]) * (11 - i);
+  r = (s * 10) % 11;
+  if (r === 10) r = 0;
+  return r === parseInt(d[10]);
+}
+
+export function BoletoForm() {
+  const [crm, setCrm] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (crm.length < 4) {
+      setError("Informe um número de CRM válido.");
+      return;
+    }
+    if (!isValidCpf(cpf)) {
+      setError("CPF inválido. Verifique os dígitos.");
+      return;
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      alert(
+        `Boleto da anuidade 2026 gerado para o CRM ${crm}.\n\nEm produção, redirecionaríamos para o PDF do boleto / Pix.`,
+      );
+    }, 1200);
+  };
+
+  return (
+    <section id="emitir" className="bg-background py-12 md:py-20">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 md:grid-cols-[1.05fr_1fr] md:gap-14 md:px-6">
+        <div className="order-2 md:order-1">
+          <span className="text-xs font-semibold uppercase tracking-[0.25em] text-crm-green">
+            Anuidade 2026
+          </span>
+          <h1 className="mt-3 font-serif text-3xl font-semibold leading-tight text-foreground md:text-5xl">
+            Emita o boleto da sua anuidade
+          </h1>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
+            Informe seu CRM e CPF para gerar o boleto ou o Pix da anuidade 2026 do CRM-MG.
+            Pague à vista com até <strong className="text-crm-green-dark">15% de desconto</strong>{" "}
+            ou parcele em até 5x sem juros.
+          </p>
+
+          <ul className="mt-8 space-y-4 text-sm">
+            <li className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
+              <span className="text-foreground/85">
+                Consulta segura à base oficial do Conselho Regional de Medicina.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <FileText className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
+              <span className="text-foreground/85">
+                Boleto, Pix copia-e-cola e opção de parcelamento no cartão.
+              </span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Lock className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
+              <span className="text-foreground/85">
+                Seus dados são utilizados somente para localizar seu registro.
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="order-1 rounded-3xl border border-border bg-card p-6 shadow-elevated md:order-2 md:p-8"
+        >
+          <h2 className="font-serif text-xl font-semibold text-foreground md:text-2xl">
+            Dados para emissão
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Preencha os campos abaixo para continuar.
+          </p>
+
+          <div className="mt-6 space-y-5">
+            <div>
+              <label htmlFor="crm" className="block text-sm font-medium text-foreground">
+                Número do CRM
+              </label>
+              <input
+                id="crm"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="Ex.: 123456"
+                value={crm}
+                onChange={(e) => setCrm(maskCrm(e.target.value))}
+                className="mt-2 h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none transition focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Apenas dígitos, sem UF.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="cpf" className="block text-sm font-medium text-foreground">
+                CPF do médico(a)
+              </label>
+              <input
+                id="cpf"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(e) => setCpf(maskCpf(e.target.value))}
+                className="mt-2 h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground outline-none transition focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+              />
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-crm-red/30 bg-crm-red/5 px-3 py-2 text-sm text-crm-red-dark"
+              >
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-crm-green text-base font-semibold text-primary-foreground shadow-elevated transition hover:bg-crm-green-dark disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Consultando…
+                </>
+              ) : (
+                "Emitir boleto"
+              )}
+            </button>
+
+            <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Conexão segura · dados protegidos pela LGPD
+            </p>
+          </div>
+        </form>
+      </div>
+    </section>
+  );
+}
