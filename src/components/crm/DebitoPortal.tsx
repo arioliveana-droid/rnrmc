@@ -10,7 +10,6 @@ import {
   QrCode,
   Receipt,
   ShieldCheck,
-  Stethoscope,
   Wallet,
 } from "lucide-react";
 
