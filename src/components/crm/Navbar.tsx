@@ -3,9 +3,9 @@ import { Menu, X } from "lucide-react";
 import logo from "@/assets/crm-mg-logo.png.asset.json";
 
 const links = [
-  { href: "#planos", label: "Planos" },
-  { href: "#beneficios", label: "Benefícios" },
+  { href: "#emitir", label: "Emitir boleto" },
   { href: "#duvidas", label: "Dúvidas" },
+  { href: "https://crmmg.org.br", label: "CRM-MG" },
 ];
 
 export function Navbar() {
