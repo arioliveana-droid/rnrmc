@@ -675,6 +675,17 @@ function StripeSection() {
             </div>
           </div>
 
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proxy HTTP (opcional — apenas para troca de nome)</div>
+            <div className="mt-2">
+              <input value={proxyUrl} onChange={(e) => setProxyUrl(e.target.value)} placeholder="http://user:pass@rp.scrapegw.com:6060" className={monoCls + " w-full"} />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Formato: http://usuário:senha@host:porta. Usado SOMENTE nas chamadas de alteração de nome na Stripe.
+            </p>
+          </div>
+
+
           <div className="flex justify-end">
             <button
               onClick={handleAdd}
