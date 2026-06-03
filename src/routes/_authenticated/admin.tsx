@@ -546,7 +546,7 @@ function StripeSection() {
   const remove = useServerFn(removerStripeAccount);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
-  const updateProxy = useServerFn(atualizarProxyStripe);
+  
 
   const [items, setItems] = useState<StripeAccount[]>([]);
   const [nome, setNome] = useState("");
