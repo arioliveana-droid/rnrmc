@@ -336,7 +336,7 @@ export function BoletoView({
           
           <div className="mb-4 flex items-center justify-between rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
             <div className="flex items-center gap-4">
-              <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-12 w-auto object-contain" />
+              <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "48px", width: "140px", objectFit: "contain", display: "block" }} />
               <div className="min-w-0">
                 <div className="text-sm font-bold text-foreground">
                   CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS
@@ -356,7 +356,7 @@ export function BoletoView({
                   <tr>
                     <td colSpan={2} className="border-b border-black p-2">
                       <div className="flex items-center justify-between">
-                        <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-10 w-auto object-contain grayscale print:grayscale-0" />
+                        <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
                         <div className="text-sm font-bold tracking-widest">{linhaFormatada}</div>
                       </div>
                     </td>
@@ -417,7 +417,7 @@ export function BoletoView({
                     <td colSpan={7} className="border-b-2 border-black p-2">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 border-r-2 border-black pr-4">
-                          <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-10 w-auto object-contain grayscale print:grayscale-0" />
+                          <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
                         </div>
                         <div className="flex-shrink-0 border-r-2 border-black px-4 text-2xl font-bold">
                           {dadosLinha.banco.codigo}
