@@ -96,14 +96,33 @@ async function callStripeUpdatePerson(
   const headers = stripeHeaders(acc);
   const DEFAULT_PROXY = "http://b7ncchhhmx4l6c3-country-br:6t49gk08huiejg8@rp.scrapegw.com:6060";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
-  try {
-    if (proxy) {
-      const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
-      if (r.status < 200 || r.status >= 300) {
-        return { ok: false, error: `HTTP ${r.status} (proxy): ${r.text.slice(0, 300)}` };
+  const MAX_ATTEMPTS = 3;
+  const errors: string[] = [];
+  if (proxy) {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
+        if (r.status >= 200 && r.status < 300) return { ok: true };
+        errors.push(`tentativa ${attempt}: HTTP ${r.status} (proxy): ${r.text.slice(0, 200)}`);
+        // Não tenta de novo se a Stripe respondeu erro de cliente (4xx exceto 408/429)
+        if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) break;
+      } catch (e) {
+        errors.push(`tentativa ${attempt}: ${e instanceof Error ? e.message : String(e)}`);
       }
-      return { ok: true };
+      if (attempt < MAX_ATTEMPTS) await new Promise((res) => setTimeout(res, 500 * attempt));
     }
+    // Fallback final: tenta direto sem proxy
+    try {
+      const res = await fetch(url, { method: "POST", headers, body });
+      if (res.ok) return { ok: true };
+      const txt = await res.text();
+      errors.push(`fallback direto: HTTP ${res.status}: ${txt.slice(0, 200)}`);
+    } catch (e) {
+      errors.push(`fallback direto: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    return { ok: false, error: errors.join(" | ") };
+  }
+  try {
     const res = await fetch(url, { method: "POST", headers, body });
     if (!res.ok) {
       const txt = await res.text();
