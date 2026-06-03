@@ -56,11 +56,11 @@ function Field({
   mono?: boolean;
 }) {
   return (
-    <div className={`border-r border-b border-neutral-300 px-2.5 py-1.5 ${className}`}>
-      <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
+    <div className={`border-r border-b border-neutral-300 px-2.5 py-1.5 print:border-black ${className}`}>
+      <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
         {label}
       </div>
-      <div className={`mt-0.5 text-[13px] font-medium text-neutral-900 ${mono ? "font-mono" : ""}`}>
+      <div className={`mt-0.5 text-[13px] font-medium text-neutral-900 print:text-black ${mono ? "font-mono" : ""}`}>
         {value || "—"}
       </div>
     </div>
@@ -121,12 +121,29 @@ export function BoletoView({
     <div className="min-h-screen bg-[oklch(0.97_0.005_158)] print:bg-white">
       <style>{`
         @media print {
-          @page { margin: 0; }
+          @page { margin: 0; size: auto; }
           body { 
-            margin: 1cm; 
+            margin: 0;
+            padding: 0;
             background: white !important; 
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact; 
+          }
+          /* Hide EVERYTHING by default */
+          body * {
+            visibility: hidden;
+          }
+          /* Show ONLY the print container and its children */
+          .boleto-print-container, .boleto-print-container * {
+            visibility: visible;
+          }
+          /* Position it at the top left of the page */
+          .boleto-print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 1.5cm;
           }
         }
       `}</style>
@@ -317,9 +334,9 @@ export function BoletoView({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-card print:rounded-none print:border-black print:shadow-none">
-            <div className="flex items-stretch border-b-2 border-neutral-900">
-              <div className="flex items-center gap-2 border-r-2 border-neutral-900 px-4 py-2">
+          <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-card print:rounded-none print:border-black print:shadow-none boleto-print-container">
+            <div className="flex items-stretch border-b-2 border-neutral-900 print:border-black">
+              <div className="flex items-center gap-2 border-r-2 border-neutral-900 print:border-black px-4 py-2">
                 <div className="grid h-8 w-8 place-items-center rounded-md bg-crm-green text-primary-foreground text-[11px] font-extrabold">
                   CRM
                 </div>
@@ -364,48 +381,48 @@ export function BoletoView({
               <Field className="col-span-3 border-r-0" label="Data processamento" value={hoje} />
             </div>
 
-            <div className="grid grid-cols-12 border-b border-neutral-300">
+            <div className="grid grid-cols-12 border-b border-neutral-300 print:border-black">
               <Field className="col-span-3" label="Uso do banco" value="—" />
-              <Field className="col-span-3" label="Carteira" value={dadosLinha.carteira} mono />
+              <Field className="col-span-2" label="Carteira" value={dadosLinha.carteira} mono />
               <Field className="col-span-2" label="Espécie" value="R$" />
-              <Field className="col-span-1" label="Quantidade" value="1" />
+              <Field className="col-span-2" label="Quantidade" value="1" />
               <Field className="col-span-3 border-r-0" label="Nosso número" value={dadosLinha.nossoNumero} mono />
             </div>
 
             <div className="grid grid-cols-12">
-              <div className="col-span-8 border-r border-b border-neutral-300 px-2.5 py-2">
-                <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
+              <div className="col-span-8 border-r border-b border-neutral-300 print:border-black px-2.5 py-2">
+                <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
                   Instruções (texto de responsabilidade do beneficiário)
                 </div>
-                <ul className="mt-1.5 space-y-1 text-[12px] leading-snug text-neutral-800">
+                <ul className="mt-1.5 space-y-1 text-[12px] leading-snug text-neutral-800 print:text-black">
                   <li>• Referente à <strong>{debito.descricao}</strong>.</li>
                   <li>• Não receber após o vencimento.</li>
                   <li>• Em caso de dúvida, contatar a Tesouraria do CRM-MG.</li>
                 </ul>
               </div>
-              <div className="col-span-4 border-b border-neutral-300">
+              <div className="col-span-4 border-b border-neutral-300 print:border-black">
                 <Field label="(=) Valor do documento" value={fmtBRL(Number(debito.valor))} className="border-r-0" />
                 <Field label="(−) Descontos / Abatimentos" value="—" className="border-r-0" />
                 <Field label="(+) Juros / Multa" value="—" className="border-r-0" />
-                <div className="border-b-0 border-r-0 border-neutral-300 bg-neutral-50 px-2.5 py-2">
-                  <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
+                <div className="border-b-0 border-r-0 border-neutral-300 bg-neutral-50 px-2.5 py-2 print:bg-white print:border-black">
+                  <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
                     (=) Valor cobrado
                   </div>
-                  <div className="mt-0.5 text-lg font-bold text-neutral-900">
+                  <div className="mt-0.5 text-lg font-bold text-neutral-900 print:text-black">
                     {fmtBRL(Number(debito.valor))}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="border-b border-neutral-300 px-2.5 py-2">
-              <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
+            <div className="border-b border-neutral-300 print:border-black px-2.5 py-2">
+              <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
                 Pagador
               </div>
-              <div className="mt-0.5 text-[13px] font-semibold text-neutral-900">
+              <div className="mt-0.5 text-[13px] font-semibold text-neutral-900 print:text-black">
                 {debito.nome}
               </div>
-              <div className="text-[12px] text-neutral-700">
+              <div className="text-[12px] text-neutral-700 print:text-neutral-800">
                 CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/MG
               </div>
             </div>
