@@ -440,7 +440,7 @@ export function BoletoView({
             )}
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Cole no app do seu banco em "Pagar com código de barras" ou pague pelo Pix copia-e-cola com 5% de desconto.
+              Cole no app do seu banco em "Pagar com código de barras".
             </p>
           </div>
         </div>
