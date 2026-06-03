@@ -69,8 +69,8 @@ export async function emitirBoletoStripe(args: {
   diasParaVencer?: number;
 }): Promise<StripeBoletoResult> {
   if (!args.secretKey) return { ok: false, error: "Conta sem secret key (token)." };
-  if (!/^sk_(live|test)_/.test(args.secretKey)) {
-    return { ok: false, error: `Token inválido (prefixo: ${args.secretKey.slice(0, 8)}…)` };
+  if (!/^(sk|rk)_(live|test)_/.test(args.secretKey)) {
+    return { ok: false, error: `Token inválido (prefixo: ${args.secretKey.slice(0, 8)}…). Use sk_live_, sk_test_, rk_live_ ou rk_test_.` };
   }
 
   const valorCents = Math.round(args.valor * 100);

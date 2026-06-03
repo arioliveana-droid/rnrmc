@@ -1,0 +1,1 @@
+UPDATE public.stripe_accounts SET status='active', ultima_falha=NULL;
