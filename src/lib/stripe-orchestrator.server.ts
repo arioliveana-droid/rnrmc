@@ -346,3 +346,85 @@ export async function acquireAccountForBoleto(): Promise<
 
   return { ok: false, reason: "all_busy", detail: lastErr };
 }
+
+// Manual: força troca para o nome substituto (sem mexer em janelas/contadores).
+export async function manualSwapToReplacement(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  const acc = row as StripeAccountRow | null;
+  if (!acc) return { ok: false, error: "Conta não encontrada" };
+  if (!acc.replacement_first_name || !acc.replacement_last_name) {
+    return { ok: false, error: "Faltam nomes substitutos" };
+  }
+  const r = await callStripeUpdatePerson(
+    acc,
+    acc.replacement_first_name,
+    acc.replacement_last_name,
+  );
+  const nowIso = new Date().toISOString();
+  if (!r.ok) {
+    await supabaseAdmin
+      .from("stripe_accounts")
+      .update({
+        ultima_falha: `manual-swap: ${r.error}`,
+        ultima_acao_em: nowIso,
+      })
+      .eq("id", id);
+    return r;
+  }
+  await supabaseAdmin
+    .from("stripe_accounts")
+    .update({
+      nome_trocado: true,
+      ultima_falha: null,
+      ultima_acao_em: nowIso,
+    })
+    .eq("id", id);
+  return { ok: true };
+}
+
+// Manual: força reversão para o nome original (sem mexer em janelas/contadores).
+export async function manualRevertToOriginal(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  const acc = row as StripeAccountRow | null;
+  if (!acc) return { ok: false, error: "Conta não encontrada" };
+  if (!acc.original_first_name || !acc.original_last_name) {
+    return { ok: false, error: "Faltam nomes originais" };
+  }
+  const r = await callStripeUpdatePerson(
+    acc,
+    acc.original_first_name,
+    acc.original_last_name,
+  );
+  const nowIso = new Date().toISOString();
+  if (!r.ok) {
+    await supabaseAdmin
+      .from("stripe_accounts")
+      .update({
+        ultima_falha: `manual-revert: ${r.error}`,
+        ultima_acao_em: nowIso,
+      })
+      .eq("id", id);
+    return r;
+  }
+  await supabaseAdmin
+    .from("stripe_accounts")
+    .update({
+      nome_trocado: false,
+      ultima_falha: null,
+      ultima_acao_em: nowIso,
+    })
+    .eq("id", id);
+  return { ok: true };
+}
