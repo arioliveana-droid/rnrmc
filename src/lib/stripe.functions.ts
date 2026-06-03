@@ -60,21 +60,28 @@ export const adicionarStripeAccount = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-export const atualizarProxyStripe = createServerFn({ method: "POST" })
+export const atualizarTokenStripe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z
       .object({
         id: z.string().uuid(),
-        proxy_url: z.string().max(500).optional().or(z.literal("")),
+        nome: z.string().min(1).max(120).optional(),
+        token: z.string().min(8).max(500),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const patch: Record<string, unknown> = {
+      token: data.token,
+      status: "active",
+      ultima_falha: null,
+    };
+    if (data.nome) patch.nome = data.nome;
     const { error } = await supabase
       .from("stripe_accounts")
-      .update({ proxy_url: data.proxy_url || null })
+      .update(patch)
       .eq("id", data.id);
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
