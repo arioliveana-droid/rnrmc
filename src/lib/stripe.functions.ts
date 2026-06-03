@@ -9,7 +9,7 @@ export const listarStripeAccounts = createServerFn({ method: "GET" })
   const { data, error } = await supabase
     .from("stripe_accounts")
     .select(
-      "id, nome, token, bearer_token, ativo, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos, created_at",
+      "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, ativo, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos, created_at",
     )
     .order("created_at", { ascending: false });
     if (error) {
