@@ -134,6 +134,229 @@ function AdminPage() {
   );
 }
 
+// ----------------- DASHBOARD -----------------
+type Stats = Awaited<ReturnType<typeof getDashboardStats>>;
+
+function StatCard({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  accent?: "green" | "amber" | "blue" | "neutral";
+}) {
+  const accentClass =
+    accent === "green"
+      ? "from-crm-green/10 to-transparent border-crm-green/30"
+      : accent === "amber"
+        ? "from-amber-200/30 to-transparent border-amber-300/60"
+        : accent === "blue"
+          ? "from-sky-200/30 to-transparent border-sky-300/60"
+          : "from-secondary/60 to-transparent border-border";
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br ${accentClass} p-5`}
+    >
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-2 font-serif text-3xl font-semibold text-foreground">
+        {value}
+      </div>
+      {hint && (
+        <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
+      )}
+    </div>
+  );
+}
+
+function DashboardSection() {
+  const fn = useServerFn(getDashboardStats);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fn();
+      setStats(r);
+    } finally {
+      setLoading(false);
+    }
+  }, [fn]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  if (loading && !stats) {
+    return (
+      <p className="text-sm text-muted-foreground">Carregando estatísticas…</p>
+    );
+  }
+  if (!stats) return null;
+
+  const maxSerie = Math.max(1, ...stats.serie7d.map((d) => d.consultas));
+
+  return (
+    <section className="space-y-8">
+      <div>
+        <h2 className="font-serif text-2xl font-semibold text-foreground">
+          Dashboard
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Visão geral em tempo real · atualiza a cada 30s.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Débitos importados"
+          value={stats.debitos.toLocaleString("pt-BR")}
+          hint="Base total cadastrada"
+          accent="neutral"
+        />
+        <StatCard
+          label="Consultas hoje"
+          value={stats.consultasHoje.toLocaleString("pt-BR")}
+          hint={`${stats.consultasEncontradasHoje} encontraram débito`}
+          accent="blue"
+        />
+        <StatCard
+          label="Boletos gerados hoje"
+          value={stats.boletosHoje.toLocaleString("pt-BR")}
+          hint={`${fmtBRL(stats.valorHoje)} em valor`}
+          accent="green"
+        />
+        <StatCard
+          label="Stripe ativas"
+          value={`${stats.stripeAtivas}/${stats.stripeTotal}`}
+          hint="Contas em rotação"
+          accent="amber"
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Consultas (total)"
+          value={stats.consultasTotal.toLocaleString("pt-BR")}
+        />
+        <StatCard
+          label="Boletos (total)"
+          value={stats.boletosTotal.toLocaleString("pt-BR")}
+        />
+        <StatCard
+          label="Boletos copiados"
+          value={stats.boletosCopiadosTotal.toLocaleString("pt-BR")}
+          hint={
+            stats.boletosTotal > 0
+              ? `${Math.round((stats.boletosCopiadosTotal / stats.boletosTotal) * 100)}% de conversão`
+              : undefined
+          }
+        />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-end justify-between">
+          <div>
+            <div className="text-sm font-semibold text-foreground">
+              Consultas nos últimos 7 dias
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Total vs. consultas com débito encontrado
+            </div>
+          </div>
+        </div>
+        <div className="mt-6 flex h-44 items-end gap-3">
+          {stats.serie7d.map((d) => {
+            const h = (d.consultas / maxSerie) * 100;
+            const hEnc = (d.encontradas / maxSerie) * 100;
+            return (
+              <div key={d.date} className="flex flex-1 flex-col items-center gap-2">
+                <div className="relative flex h-full w-full items-end justify-center">
+                  <div
+                    className="w-full rounded-t-md bg-crm-green/20"
+                    style={{ height: `${h}%` }}
+                  />
+                  <div
+                    className="absolute bottom-0 w-full rounded-t-md bg-crm-green"
+                    style={{ height: `${hEnc}%` }}
+                  />
+                </div>
+                <div className="text-[10px] font-medium text-muted-foreground">
+                  {new Date(d.date + "T00:00:00").toLocaleDateString("pt-BR", {
+                    weekday: "short",
+                  })}
+                </div>
+                <div className="text-[10px] text-muted-foreground">
+                  {d.consultas}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-sm bg-crm-green/20" /> Total
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-sm bg-crm-green" /> Com débito
+          </span>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-3">
+          <div className="text-sm font-semibold text-foreground">
+            Últimos boletos emitidos
+          </div>
+        </div>
+        {stats.ultimosBoletos.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Nenhum boleto emitido ainda.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {stats.ultimosBoletos.map((b) => (
+              <li
+                key={b.id}
+                className="flex items-center justify-between gap-4 px-5 py-3"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-foreground">
+                    {b.nome}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    CRM {b.crm} · {fmtDate(b.gerado_em)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-foreground">
+                    {fmtBRL(Number(b.valor))}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                      b.copiado
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    {b.copiado ? "Copiado" : "Pendente"}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ----------------- IMPORT -----------------
 function ImportSection() {
   const importFn = useServerFn(bulkImportDebitos);
