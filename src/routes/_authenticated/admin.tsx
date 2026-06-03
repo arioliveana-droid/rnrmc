@@ -595,7 +595,6 @@ function StripeSection() {
           original_last_name: origLast.trim(),
           replacement_first_name: replFirst.trim(),
           replacement_last_name: replLast.trim(),
-          proxy_url: proxyUrl.trim(),
         },
       });
       if (!r.ok) {
