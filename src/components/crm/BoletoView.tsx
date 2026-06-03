@@ -355,7 +355,6 @@ export function BoletoView({
                   <li>• Referente à <strong>{debito.descricao}</strong>.</li>
                   <li>• Não receber após o vencimento.</li>
                   <li>• Em caso de dúvida, contatar a Tesouraria do CRM-MG.</li>
-                  <li>• Pagamento via Pix copia-e-cola: desconto de 5% até o vencimento.</li>
                 </ul>
               </div>
               <div className="col-span-4 border-b border-neutral-300">
@@ -441,7 +440,7 @@ export function BoletoView({
             )}
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Cole no app do seu banco em "Pagar com código de barras" ou pague pelo Pix copia-e-cola com 5% de desconto.
+              Cole no app do seu banco em "Pagar com código de barras".
             </p>
           </div>
         </div>
