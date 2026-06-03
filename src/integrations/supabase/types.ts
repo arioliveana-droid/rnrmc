@@ -186,6 +186,7 @@ export type Database = {
       }
       stripe_accounts: {
         Row: {
+          account_id: string | null
           ativo: boolean
           bearer_token: string | null
           boletos_na_janela: number
@@ -193,11 +194,17 @@ export type Database = {
           id: string
           janela_iniciada_em: string | null
           nome: string
+          original_first_name: string | null
+          original_last_name: string | null
+          person_id: string | null
+          replacement_first_name: string | null
+          replacement_last_name: string | null
           token: string
           total_boletos: number
           ultimo_uso_em: string | null
         }
         Insert: {
+          account_id?: string | null
           ativo?: boolean
           bearer_token?: string | null
           boletos_na_janela?: number
@@ -205,11 +212,17 @@ export type Database = {
           id?: string
           janela_iniciada_em?: string | null
           nome: string
+          original_first_name?: string | null
+          original_last_name?: string | null
+          person_id?: string | null
+          replacement_first_name?: string | null
+          replacement_last_name?: string | null
           token: string
           total_boletos?: number
           ultimo_uso_em?: string | null
         }
         Update: {
+          account_id?: string | null
           ativo?: boolean
           bearer_token?: string | null
           boletos_na_janela?: number
@@ -217,6 +230,11 @@ export type Database = {
           id?: string
           janela_iniciada_em?: string | null
           nome?: string
+          original_first_name?: string | null
+          original_last_name?: string | null
+          person_id?: string | null
+          replacement_first_name?: string | null
+          replacement_last_name?: string | null
           token?: string
           total_boletos?: number
           ultimo_uso_em?: string | null
