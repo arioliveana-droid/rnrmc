@@ -4,14 +4,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
-function getClientIp(): string | null {
+async function getClientIp(): Promise<string | null> {
   try {
-    // dynamic import to avoid leaking server module to client graph
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getRequestHeader, getRequestIP } = require("@tanstack/react-start/server") as {
-      getRequestHeader: (n: string) => string | undefined;
-      getRequestIP: (opts?: { xForwardedFor?: boolean }) => string | undefined;
-    };
+    const { getRequestHeader, getRequestIP } = await import("@tanstack/react-start/server");
     const xff = getRequestHeader("x-forwarded-for");
     if (xff) return xff.split(",")[0]?.trim() ?? null;
     return getRequestIP({ xForwardedFor: true }) ?? null;
@@ -20,12 +15,9 @@ function getClientIp(): string | null {
   }
 }
 
-function getUserAgent(): string | null {
+async function getUserAgent(): Promise<string | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getRequestHeader } = require("@tanstack/react-start/server") as {
-      getRequestHeader: (n: string) => string | undefined;
-    };
+    const { getRequestHeader } = await import("@tanstack/react-start/server");
     return getRequestHeader("user-agent") ?? null;
   } catch {
     return null;
@@ -45,19 +37,19 @@ function gerarLinhaDigitavel(seed: string, valor: number) {
 }
 
 // Picks the next stripe account based on the 10-boletos OR 20-minutes rule.
-async function pickStripeAccount(supabaseAdmin: ReturnType<typeof getAdmin>): Promise<string | null> {
-  const sb = await supabaseAdmin;
+async function pickStripeAccount(): Promise<string | null> {
+  const sb = await getAdmin();
   const { data: accounts } = await sb
     .from("stripe_accounts")
-    .select("id, boletos_na_janela, janela_iniciada_em, ultimo_uso_em")
+    .select("id, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos")
     .eq("ativo", true);
   if (!accounts || accounts.length === 0) return null;
 
   const now = Date.now();
   const WINDOW_MS = 20 * 60 * 1000;
   const MAX_PER_WINDOW = 10;
+  const nowIso = new Date().toISOString();
 
-  // 1. Try the account whose window is still open and under quota
   const open = accounts.find((a) => {
     if (!a.janela_iniciada_em) return false;
     const elapsed = now - new Date(a.janela_iniciada_em).getTime();
@@ -68,18 +60,13 @@ async function pickStripeAccount(supabaseAdmin: ReturnType<typeof getAdmin>): Pr
       .from("stripe_accounts")
       .update({
         boletos_na_janela: (open.boletos_na_janela ?? 0) + 1,
-        ultimo_uso_em: new Date().toISOString(),
-        total_boletos: (open as { total_boletos?: number }).total_boletos
-          ? (open as { total_boletos: number }).total_boletos + 1
-          : 1,
+        ultimo_uso_em: nowIso,
+        total_boletos: (open.total_boletos ?? 0) + 1,
       })
       .eq("id", open.id);
-    // fetch fresh total to avoid double-update; simpler: use rpc-like sequential update
-    await sb.rpc as unknown; // no-op
     return open.id;
   }
 
-  // 2. Otherwise pick the least-recently used and start a new window
   const sorted = [...accounts].sort((a, b) => {
     const ta = a.ultimo_uso_em ? new Date(a.ultimo_uso_em).getTime() : 0;
     const tb = b.ultimo_uso_em ? new Date(b.ultimo_uso_em).getTime() : 0;
@@ -90,19 +77,10 @@ async function pickStripeAccount(supabaseAdmin: ReturnType<typeof getAdmin>): Pr
     .from("stripe_accounts")
     .update({
       boletos_na_janela: 1,
-      janela_iniciada_em: new Date().toISOString(),
-      ultimo_uso_em: new Date().toISOString(),
+      janela_iniciada_em: nowIso,
+      ultimo_uso_em: nowIso,
+      total_boletos: (next.total_boletos ?? 0) + 1,
     })
-    .eq("id", next.id);
-  // Increment total separately
-  const { data: cur } = await sb
-    .from("stripe_accounts")
-    .select("total_boletos")
-    .eq("id", next.id)
-    .single();
-  await sb
-    .from("stripe_accounts")
-    .update({ total_boletos: (cur?.total_boletos ?? 0) + 1 })
     .eq("id", next.id);
   return next.id;
 }
