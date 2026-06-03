@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   bulkImportDebitos,
   listarConsultas,
@@ -387,26 +387,109 @@ function DashboardSection() {
 }
 
 // ----------------- IMPORT -----------------
+const CHUNK_SIZE = 200; // linhas por lote
+const CONCURRENCY = 4;  // requisições simultâneas
+
+type ImportProgress = {
+  totalLines: number;
+  processedLines: number;
+  inserted: number;
+  skipped: number;
+  errorCount: number;
+  errors: Array<{ line: number; raw: string; reason: string }>;
+  done: boolean;
+};
+
 function ImportSection() {
   const importFn = useServerFn(bulkImportDebitos);
   const [raw, setRaw] = useState("");
+  const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{
-    inserted: number;
-    errors: Array<{ line: number; raw: string; reason: string }>;
-  } | null>(null);
+  const abortRef = useRef(false);
 
   const handleImport = async () => {
+    const allLines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    if (allLines.length === 0) return;
+
+    abortRef.current = false;
     setLoading(true);
-    setResult(null);
-    try {
-      const res = await importFn({ data: { raw } });
-      setResult(res);
-      if (res.inserted > 0) setRaw("");
-    } finally {
-      setLoading(false);
+    setProgress({
+      totalLines: allLines.length,
+      processedLines: 0,
+      inserted: 0,
+      skipped: 0,
+      errorCount: 0,
+      errors: [],
+      done: false,
+    });
+
+    // Divide em chunks
+    const chunks: Array<{ lines: string[]; offset: number }> = [];
+    for (let i = 0; i < allLines.length; i += CHUNK_SIZE) {
+      chunks.push({ lines: allLines.slice(i, i + CHUNK_SIZE), offset: i });
     }
+
+    // Processa com concurrency controlada
+    let chunkIndex = 0;
+    const accProgress: ImportProgress = {
+      totalLines: allLines.length,
+      processedLines: 0,
+      inserted: 0,
+      skipped: 0,
+      errorCount: 0,
+      errors: [],
+      done: false,
+    };
+
+    const processChunk = async (chunk: { lines: string[]; offset: number }) => {
+      if (abortRef.current) return;
+      try {
+        const res = await importFn({
+          data: { raw: chunk.lines.join("\n"), lineOffset: chunk.offset },
+        });
+        accProgress.processedLines += chunk.lines.length;
+        accProgress.inserted += res.inserted;
+        accProgress.skipped += res.skippedDebts ?? 0;
+        accProgress.errorCount += res.errors.length;
+        accProgress.errors = [...accProgress.errors, ...res.errors].slice(0, 100);
+      } catch (e) {
+        accProgress.processedLines += chunk.lines.length;
+        accProgress.errorCount += chunk.lines.length;
+        accProgress.errors.push({
+          line: chunk.offset + 1,
+          raw: "",
+          reason: e instanceof Error ? e.message : "Erro desconhecido no lote",
+        });
+      }
+      setProgress({ ...accProgress });
+    };
+
+    // Pool de workers com concurrency = CONCURRENCY
+    const workers = Array.from({ length: CONCURRENCY }, async () => {
+      while (true) {
+        if (abortRef.current) break;
+        const idx = chunkIndex++;
+        if (idx >= chunks.length) break;
+        await processChunk(chunks[idx]);
+      }
+    });
+
+    await Promise.all(workers);
+
+    accProgress.done = true;
+    setProgress({ ...accProgress });
+    setLoading(false);
+    if (accProgress.inserted > 0) setRaw("");
   };
+
+  const handleCancel = () => {
+    abortRef.current = true;
+    setLoading(false);
+  };
+
+  const pct = progress
+    ? Math.round((progress.processedLines / Math.max(progress.totalLines, 1)) * 100)
+    : 0;
 
   return (
     <section>
@@ -414,12 +497,12 @@ function ImportSection() {
         Importar débitos
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Cole as linhas no formato abaixo. Registros existentes serão atualizados.
+        Cole as linhas abaixo. Suporta múltiplos débitos por linha — apenas anuidades (A26) são importadas.
       </p>
 
-      <pre className="mt-6 overflow-x-auto rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground">
-{`NOME:CPF:CRM:STATUS:COD_DEBITO:DESCRICAO
-ANNA CAROLLYNE SANTOS PINTO:11075980607:105866:POSITIVO:A26:ANUIDADE 2026`}
+      <pre className="mt-6 overflow-x-auto rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground whitespace-pre-wrap break-all">
+{`NOME:CPF:CRM:STATUS:A26:ANUIDADE 2026
+NOME:CPF:CRM:STATUS:A26:ANUIDADE 2026 | M24:MULTA ELEITORAL 2024`}
       </pre>
 
       <textarea
@@ -427,37 +510,117 @@ ANNA CAROLLYNE SANTOS PINTO:11075980607:105866:POSITIVO:A26:ANUIDADE 2026`}
         onChange={(e) => setRaw(e.target.value)}
         rows={14}
         spellCheck={false}
+        disabled={loading}
         placeholder="Cole aqui uma linha por médico…"
-        className="mt-4 w-full rounded-xl border border-border bg-card p-4 font-mono text-sm text-foreground outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+        className="mt-4 w-full rounded-xl border border-border bg-card p-4 font-mono text-sm text-foreground outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20 disabled:opacity-60"
       />
 
-      <button
-        onClick={handleImport}
-        disabled={loading || !raw.trim()}
-        className="mt-4 h-11 rounded-lg bg-crm-green px-6 font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-60"
-      >
-        {loading ? "Importando…" : "Importar / atualizar"}
-      </button>
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          onClick={handleImport}
+          disabled={loading || !raw.trim()}
+          className="h-11 rounded-lg bg-crm-green px-6 font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-60"
+        >
+          {loading ? "Importando…" : "Importar / atualizar"}
+        </button>
+        {loading && (
+          <button
+            onClick={handleCancel}
+            className="h-11 rounded-lg border border-destructive px-4 text-sm font-medium text-destructive hover:bg-destructive/10"
+          >
+            Cancelar
+          </button>
+        )}
+        {progress && !loading && (
+          <span className="text-xs text-muted-foreground">
+            Concluído em {CONCURRENCY} threads simultâneas
+          </span>
+        )}
+      </div>
 
-      {result && (
-        <div className="mt-6 rounded-xl border border-border bg-card p-4">
-          <p className="text-sm font-semibold text-foreground">
-            {result.inserted} registro(s) importado(s).
-          </p>
-          {result.errors.length > 0 && (
-            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-              {result.errors.slice(0, 20).map((e, i) => (
-                <li key={i}>
-                  <span className="font-mono">linha {e.line}</span> — {e.reason}
-                </li>
-              ))}
-            </ul>
+      {/* Barra de progresso */}
+      {progress && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-5 space-y-4">
+          {/* Barra */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs font-medium text-muted-foreground">
+              <span>
+                {progress.processedLines.toLocaleString("pt-BR")} / {progress.totalLines.toLocaleString("pt-BR")} linhas
+              </span>
+              <span>{pct}%</span>
+            </div>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-crm-green transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            {loading && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Processando em até {CONCURRENCY} lotes de {CHUNK_SIZE} linhas simultâneos…
+              </p>
+            )}
+          </div>
+
+          {/* Contadores */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-2xl font-bold text-crm-green">
+                {progress.inserted.toLocaleString("pt-BR")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Importados</p>
+            </div>
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-2xl font-bold text-foreground">
+                {progress.skipped.toLocaleString("pt-BR")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Outros débitos ignorados</p>
+            </div>
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-2xl font-bold text-foreground">
+                {progress.processedLines.toLocaleString("pt-BR")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Linhas processadas</p>
+            </div>
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className={`text-2xl font-bold ${progress.errorCount > 0 ? "text-destructive" : "text-foreground"}`}>
+                {progress.errorCount.toLocaleString("pt-BR")}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">Erros</p>
+            </div>
+          </div>
+
+          {/* Status final */}
+          {progress.done && (
+            <p className={`text-sm font-semibold ${progress.inserted > 0 ? "text-crm-green" : "text-muted-foreground"}`}>
+              {progress.inserted > 0
+                ? `✓ ${progress.inserted.toLocaleString("pt-BR")} débito(s) de anuidade importado(s) com sucesso.`
+                : "Nenhum débito de anuidade (A26) encontrado para importar."}
+            </p>
+          )}
+
+          {/* Lista de erros */}
+          {progress.errors.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-medium text-destructive hover:underline">
+                Ver {progress.errors.length} erro(s){progress.errors.length >= 100 ? " (mostrando os primeiros 100)" : ""}
+              </summary>
+              <ul className="mt-2 max-h-48 overflow-y-auto space-y-1 text-xs text-muted-foreground">
+                {progress.errors.map((e, i) => (
+                  <li key={i} className="rounded bg-muted px-2 py-1">
+                    <span className="font-mono font-semibold">linha {e.line}</span> — {e.reason}
+                    {e.raw && <span className="block truncate font-mono opacity-60">{e.raw}</span>}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       )}
     </section>
   );
 }
+
 
 // ----------------- CONSULTAS -----------------
 function ConsultasSection() {

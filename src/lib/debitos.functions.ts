@@ -273,11 +273,13 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
     z
       .object({
         raw: z.string().min(1).max(2_000_000),
+        lineOffset: z.number().int().min(0).default(0),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const lineOffset = data.lineOffset ?? 0;
     const lines = data.raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 
     const valid: Array<{
@@ -291,19 +293,60 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
       valor: number;
     }> = [];
     const errors: Array<{ line: number; raw: string; reason: string }> = [];
+    let skippedDebts = 0;
 
-    lines.forEach((line, idx) => {
-      const parts = line.split(":").map((p) => p.trim());
-      if (parts.length < 6) {
-        errors.push({ line: idx + 1, raw: line, reason: "Formato inválido (esperado Nome:CPF:CRM:STATUS:CODDEB:DESCRICAO)" });
-        return;
+    lines.forEach((line, localIdx) => {
+      const idx = localIdx + lineOffset;
+      // Novo formato: NOME:CPF:CRM:STATUS:COD1:DESC1 | COD2:DESC2 | ...
+      // Antigo formato: NOME:CPF:CRM:STATUS:COD:DESC (sem pipe)
+      // Estratégia: separar a parte "header" (NOME:CPF:CRM:STATUS) dos segmentos de débito
+      // Um segmento de débito é sempre CODDEBITO:DESCRICAO
+
+      // Primeiro, verifica se há pipe para o novo formato multi-débito
+      const hasPipe = line.includes(" | ");
+
+      let headerStr: string;
+      let debtSegments: string[];
+
+      if (hasPipe) {
+        // Exemplo: "NOME:CPF:CRM:STATUS:A26:ANUIDADE 2026 | M24:MULTA ELEITORAL 2024"
+        // Split pelo primeiro segmento que é NOME:CPF:CRM:STATUS:COD:DESC e os demais por " | "
+        const allSegments = line.split(" | ").map((s) => s.trim());
+        // O primeiro segmento contém: NOME:CPF:CRM:STATUS:COD:DESC
+        const firstParts = allSegments[0].split(":").map((p) => p.trim());
+        if (firstParts.length < 6) {
+          errors.push({ line: idx + 1, raw: line, reason: "Formato inválido no primeiro segmento (esperado Nome:CPF:CRM:STATUS:CODDEB:DESCRICAO)" });
+          return;
+        }
+        // header = NOME:CPF:CRM:STATUS
+        headerStr = firstParts.slice(0, 4).join(":");
+        // primeiro débito vem no próprio primeiro segmento
+        const firstDebtCod = firstParts[4];
+        const firstDebtDesc = firstParts.slice(5).join(":");
+        debtSegments = [`${firstDebtCod}:${firstDebtDesc}`];
+        // demais débitos vêm dos outros segmentos
+        for (let i = 1; i < allSegments.length; i++) {
+          debtSegments.push(allSegments[i]);
+        }
+      } else {
+        // Formato simples: NOME:CPF:CRM:STATUS:COD:DESC
+        const parts = line.split(":").map((p) => p.trim());
+        if (parts.length < 6) {
+          errors.push({ line: idx + 1, raw: line, reason: "Formato inválido (esperado Nome:CPF:CRM:STATUS:CODDEB:DESCRICAO)" });
+          return;
+        }
+        headerStr = parts.slice(0, 4).join(":");
+        const debtCod = parts[4];
+        const debtDesc = parts.slice(5).join(":");
+        debtSegments = [`${debtCod}:${debtDesc}`];
       }
-      const [nome, cpfRaw, crmRaw, status, debCod, ...descParts] = parts;
-      const codigo = parts.length >= 7 ? parts[2] : null;
+
+      // Parse do header
+      const headerParts = headerStr.split(":").map((p) => p.trim());
+      const [nome, cpfRaw, crmRaw, status] = headerParts;
       const cpf = onlyDigits(cpfRaw);
       const crm = onlyDigits(crmRaw);
-      const debito_codigo = debCod;
-      const descricao = descParts.join(":");
+
       if (cpf.length !== 11) {
         errors.push({ line: idx + 1, raw: line, reason: "CPF inválido" });
         return;
@@ -312,21 +355,36 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
         errors.push({ line: idx + 1, raw: line, reason: "CRM inválido" });
         return;
       }
-      const valor = debito_codigo === "A26" ? 902.0 : 0;
-      valid.push({
-        nome,
-        cpf,
-        crm,
-        codigo,
-        status: status || "POSITIVO",
-        debito_codigo,
-        descricao,
-        valor,
-      });
+
+      // Itera sobre os segmentos de débito — importa apenas A26 (anuidade)
+      for (const seg of debtSegments) {
+        const segParts = seg.split(":").map((p) => p.trim());
+        if (segParts.length < 2) continue;
+        const debito_codigo = segParts[0];
+        const descricao = segParts.slice(1).join(":");
+
+        // Ignora qualquer débito que não seja A26
+        if (debito_codigo !== "A26") {
+          skippedDebts++;
+          continue;
+        }
+
+        valid.push({
+          nome,
+          cpf,
+          crm,
+          codigo: crm || null,
+          status: status || "POSITIVO",
+          debito_codigo,
+          descricao,
+          valor: 902.0,
+        });
+      }
+      // Médicos sem débito A26 são silenciosamente ignorados (só têm multas, etc.)
     });
 
     if (valid.length === 0) {
-      return { inserted: 0, errors };
+      return { inserted: 0, skippedDebts, errors };
     }
 
     const { error } = await supabase
@@ -335,10 +393,10 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
 
     if (error) {
       console.error("bulkImportDebitos error", error);
-      return { inserted: 0, errors: [...errors, { line: 0, raw: "", reason: error.message }] };
+      return { inserted: 0, skippedDebts, errors: [...errors, { line: 0, raw: "", reason: error.message }] };
     }
 
-    return { inserted: valid.length, errors };
+    return { inserted: valid.length, skippedDebts, errors };
   });
 
 export const getDashboardStats = createServerFn({ method: "GET" })
