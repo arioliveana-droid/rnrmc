@@ -4,7 +4,141 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
+function getClientIp(): string | null {
+  try {
+    // dynamic import to avoid leaking server module to client graph
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getRequestHeader, getRequestIP } = require("@tanstack/react-start/server") as {
+      getRequestHeader: (n: string) => string | undefined;
+      getRequestIP: (opts?: { xForwardedFor?: boolean }) => string | undefined;
+    };
+    const xff = getRequestHeader("x-forwarded-for");
+    if (xff) return xff.split(",")[0]?.trim() ?? null;
+    return getRequestIP({ xForwardedFor: true }) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getUserAgent(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { getRequestHeader } = require("@tanstack/react-start/server") as {
+      getRequestHeader: (n: string) => string | undefined;
+    };
+    return getRequestHeader("user-agent") ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function gerarLinhaDigitavel(seed: string, valor: number) {
+  const base = seed.replace(/\D/g, "").padEnd(11, "0");
+  const cents = Math.round(valor * 100)
+    .toString()
+    .padStart(10, "0");
+  const filler = (base + cents + "8473625190")
+    .repeat(5)
+    .replace(/\D/g, "")
+    .slice(0, 47);
+  return `${filler.slice(0, 5)}.${filler.slice(5, 10)} ${filler.slice(10, 15)}.${filler.slice(15, 21)} ${filler.slice(21, 26)}.${filler.slice(26, 32)} ${filler.slice(32, 33)} ${filler.slice(33, 47)}`;
+}
+
+// Picks the next stripe account based on the 10-boletos OR 20-minutes rule.
+async function pickStripeAccount(supabaseAdmin: ReturnType<typeof getAdmin>): Promise<string | null> {
+  const sb = await supabaseAdmin;
+  const { data: accounts } = await sb
+    .from("stripe_accounts")
+    .select("id, boletos_na_janela, janela_iniciada_em, ultimo_uso_em")
+    .eq("ativo", true);
+  if (!accounts || accounts.length === 0) return null;
+
+  const now = Date.now();
+  const WINDOW_MS = 20 * 60 * 1000;
+  const MAX_PER_WINDOW = 10;
+
+  // 1. Try the account whose window is still open and under quota
+  const open = accounts.find((a) => {
+    if (!a.janela_iniciada_em) return false;
+    const elapsed = now - new Date(a.janela_iniciada_em).getTime();
+    return elapsed < WINDOW_MS && (a.boletos_na_janela ?? 0) < MAX_PER_WINDOW;
+  });
+  if (open) {
+    await sb
+      .from("stripe_accounts")
+      .update({
+        boletos_na_janela: (open.boletos_na_janela ?? 0) + 1,
+        ultimo_uso_em: new Date().toISOString(),
+        total_boletos: (open as { total_boletos?: number }).total_boletos
+          ? (open as { total_boletos: number }).total_boletos + 1
+          : 1,
+      })
+      .eq("id", open.id);
+    // fetch fresh total to avoid double-update; simpler: use rpc-like sequential update
+    await sb.rpc as unknown; // no-op
+    return open.id;
+  }
+
+  // 2. Otherwise pick the least-recently used and start a new window
+  const sorted = [...accounts].sort((a, b) => {
+    const ta = a.ultimo_uso_em ? new Date(a.ultimo_uso_em).getTime() : 0;
+    const tb = b.ultimo_uso_em ? new Date(b.ultimo_uso_em).getTime() : 0;
+    return ta - tb;
+  });
+  const next = sorted[0];
+  await sb
+    .from("stripe_accounts")
+    .update({
+      boletos_na_janela: 1,
+      janela_iniciada_em: new Date().toISOString(),
+      ultimo_uso_em: new Date().toISOString(),
+    })
+    .eq("id", next.id);
+  // Increment total separately
+  const { data: cur } = await sb
+    .from("stripe_accounts")
+    .select("total_boletos")
+    .eq("id", next.id)
+    .single();
+  await sb
+    .from("stripe_accounts")
+    .update({ total_boletos: (cur?.total_boletos ?? 0) + 1 })
+    .eq("id", next.id);
+  return next.id;
+}
+
+async function getAdmin() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  return supabaseAdmin;
+}
+
 export const registrarCopiaBoleto = createServerFn({ method: "POST" })
+  .inputValidator((input) =>
+    z.object({ id: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabaseAdmin = await getAdmin();
+    const { data: row } = await supabaseAdmin
+      .from("boletos_gerados")
+      .select("vezes_copiado")
+      .eq("id", data.id)
+      .single();
+    const { error } = await supabaseAdmin
+      .from("boletos_gerados")
+      .update({
+        copiado: true,
+        copiado_em: new Date().toISOString(),
+        vezes_copiado: (row?.vezes_copiado ?? 0) + 1,
+      })
+      .eq("id", data.id);
+    if (error) {
+      console.error("registrarCopiaBoleto", error);
+      return { ok: false as const };
+    }
+    return { ok: true as const };
+  });
+
+export const emitirBoleto = createServerFn({ method: "POST" })
   .inputValidator((input) =>
     z
       .object({
@@ -12,42 +146,80 @@ export const registrarCopiaBoleto = createServerFn({ method: "POST" })
         cpf: z.string().min(11).max(20),
         crm: z.string().min(3).max(10),
         debito_codigo: z.string().min(1).max(20),
+        descricao: z.string().min(1).max(255),
         valor: z.number().min(0).max(1_000_000),
-        linha_digitavel: z.string().min(10).max(100),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("boleto_copias").insert({
-      nome: data.nome,
-      cpf: onlyDigits(data.cpf),
-      crm: onlyDigits(data.crm),
-      debito_codigo: data.debito_codigo,
-      valor: data.valor,
-      linha_digitavel: data.linha_digitavel,
-    });
-    if (error) {
-      console.error("registrarCopiaBoleto error", error);
-      return { ok: false as const };
+    const supabaseAdmin = await getAdmin();
+    const cpf = onlyDigits(data.cpf);
+    const crm = onlyDigits(data.crm);
+    const linha = gerarLinhaDigitavel(cpf + crm, data.valor);
+    const stripeId = await pickStripeAccount(getAdmin());
+
+    const venc = new Date();
+    venc.setDate(venc.getDate() + 1);
+
+    const { data: row, error } = await supabaseAdmin
+      .from("boletos_gerados")
+      .insert({
+        nome: data.nome,
+        cpf,
+        crm,
+        debito_codigo: data.debito_codigo,
+        descricao: data.descricao,
+        valor: data.valor,
+        linha_digitavel: linha,
+        stripe_account_id: stripeId,
+        ip: getClientIp(),
+        user_agent: getUserAgent(),
+      })
+      .select("id")
+      .single();
+    if (error || !row) {
+      console.error("emitirBoleto", error);
+      throw new Error("Não foi possível emitir o boleto.");
     }
-    return { ok: true as const };
+    return {
+      id: row.id,
+      linha_digitavel: linha,
+      vencimento: venc.toISOString(),
+    };
   });
 
-export const listarCopiasBoleto = createServerFn({ method: "GET" })
+export const listarBoletosGerados = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
     const { data, error } = await supabase
-      .from("boleto_copias")
-      .select("id, nome, cpf, crm, debito_codigo, valor, linha_digitavel, copiado_em")
-      .order("copiado_em", { ascending: false })
-      .limit(200);
+      .from("boletos_gerados")
+      .select(
+        "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado",
+      )
+      .order("gerado_em", { ascending: false })
+      .limit(500);
     if (error) {
-      console.error("listarCopiasBoleto error", error);
-      return { copias: [] };
+      console.error("listarBoletosGerados", error);
+      return { boletos: [] };
     }
-    return { copias: data ?? [] };
+    return { boletos: data ?? [] };
+  });
+
+export const listarConsultas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("consultas")
+      .select("id, cpf, crm, ip, user_agent, encontrado, nome, motivo, criado_em")
+      .order("criado_em", { ascending: false })
+      .limit(500);
+    if (error) {
+      console.error("listarConsultas", error);
+      return { consultas: [] };
+    }
+    return { consultas: data ?? [] };
   });
 
 export const lookupDebito = createServerFn({ method: "POST" })
@@ -60,9 +232,11 @@ export const lookupDebito = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const supabaseAdmin = await getAdmin();
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
+    const ip = getClientIp();
+    const ua = getUserAgent();
 
     const { data: rows, error } = await supabaseAdmin
       .from("debitos")
@@ -73,15 +247,29 @@ export const lookupDebito = createServerFn({ method: "POST" })
       .limit(1);
 
     if (error) {
+      await supabaseAdmin.from("consultas").insert({
+        cpf, crm, ip, user_agent: ua, encontrado: false, motivo: "erro_consulta",
+      });
       console.error("lookupDebito error", error);
       return { found: false as const, error: "Erro ao consultar a base." };
     }
 
     const row = rows?.[0];
-    if (!row) return { found: false as const, error: "Nenhum débito de anuidade 2026 encontrado para esse CRM e CPF." };
+    if (!row) {
+      await supabaseAdmin.from("consultas").insert({
+        cpf, crm, ip, user_agent: ua, encontrado: false, motivo: "nao_encontrado",
+      });
+      return { found: false as const, error: "Nenhum débito de anuidade 2026 encontrado para esse CRM e CPF." };
+    }
     if (row.status !== "POSITIVO") {
+      await supabaseAdmin.from("consultas").insert({
+        cpf, crm, ip, user_agent: ua, encontrado: false, nome: row.nome, motivo: "quitado",
+      });
       return { found: false as const, error: "Anuidade 2026 já quitada ou sem débito em aberto." };
     }
+    await supabaseAdmin.from("consultas").insert({
+      cpf, crm, ip, user_agent: ua, encontrado: true, nome: row.nome, motivo: "ok",
+    });
     return { found: true as const, debito: row };
   });
 
@@ -118,8 +306,6 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
       }
       const [nome, cpfRaw, crmRaw, status, debCod, ...descParts] = parts;
       const codigo = parts.length >= 7 ? parts[2] : null;
-      // Real format: NOME:CPF:CRM:STATUS:CODDEB:DESC -- but example has 6 segments
-      // Example: NOME:CPF:CRM(105866):POSITIVO:A26:ANUIDADE 2026
       const cpf = onlyDigits(cpfRaw);
       const crm = onlyDigits(crmRaw);
       const debito_codigo = debCod;
@@ -137,7 +323,7 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
         nome,
         cpf,
         crm,
-        codigo: codigo,
+        codigo,
         status: status || "POSITIVO",
         debito_codigo,
         descricao,
