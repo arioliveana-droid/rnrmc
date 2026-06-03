@@ -16,6 +16,7 @@ import {
   removerStripeAccount,
   trocarNomeAgora,
   reverterNomeAgora,
+  tickOrquestrador,
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
