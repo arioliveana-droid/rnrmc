@@ -300,12 +300,8 @@ export function BoletoView({
               Pagável em qualquer banco, lotérica ou app bancário até o vencimento.
             </p>
           </div>
-
-          <p className="mt-4 px-2 text-center text-[11px] leading-relaxed text-muted-foreground">
-            Cole no app do seu banco em "Pagar com código de barras". Pagável em
-            qualquer banco, lotérica ou app bancário até o vencimento.
-          </p>
         </div>
+
 
         {/* ========= DESKTOP / PRINT VIEW ========= */}
         <div className="hidden md:block">
