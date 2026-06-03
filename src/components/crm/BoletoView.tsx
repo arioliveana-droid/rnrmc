@@ -276,7 +276,7 @@ export function BoletoView({
                 <Barcode
                   value={barcodeValue}
                   height={80}
-                  className="block w-full"
+                  className="block w-full max-w-full"
                 />
               </div>
               <p className="mt-2 text-center text-[10.5px] leading-snug text-muted-foreground">
@@ -423,10 +423,10 @@ export function BoletoView({
                         <div className="flex-shrink-0 border-r-2 border-black pr-4">
                           <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
                         </div>
-                        <div className="flex-shrink-0 border-r-2 border-black px-4 text-2xl font-bold">
+                        <div className="flex-shrink-0 border-r-2 border-black px-3 text-xl font-bold">
                           {dadosLinha.banco.codigo}
                         </div>
-                        <div className="flex-1 whitespace-nowrap text-right text-[13px] sm:text-[15px] font-bold">
+                        <div className="flex-1 whitespace-nowrap text-right text-[12px] sm:text-[13px] md:text-[14px] font-bold">
                           {linhaFormatada}
                         </div>
                       </div>
@@ -542,7 +542,7 @@ export function BoletoView({
                 </tbody>
               </table>
               <div className="mt-4 pb-4 flex justify-end pr-8 print:justify-start print:pr-0">
-                <Barcode value={barcodeValue} height={75} className="block w-[460px] max-w-full" />
+                <Barcode value={barcodeValue} height={70} className="block" />
               </div>
             </div>
           </div>
