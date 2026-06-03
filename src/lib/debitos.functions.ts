@@ -326,3 +326,89 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
 
     return { inserted: valid.length, errors };
   });
+
+export const getDashboardStats = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const isoDay = startOfDay.toISOString();
+    const last7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [
+      debitosCount,
+      consultasTotal,
+      consultasHoje,
+      consultasEncontradasHoje,
+      boletosTotal,
+      boletosHoje,
+      boletosCopiadosTotal,
+      stripeAtivas,
+      stripeTotal,
+      boletosValorAgg,
+      ultimosBoletos,
+      ultimasConsultas,
+    ] = await Promise.all([
+      supabase.from("debitos").select("*", { count: "exact", head: true }),
+      supabase.from("consultas").select("*", { count: "exact", head: true }),
+      supabase.from("consultas").select("*", { count: "exact", head: true }).gte("criado_em", isoDay),
+      supabase.from("consultas").select("*", { count: "exact", head: true }).gte("criado_em", isoDay).eq("encontrado", true),
+      supabase.from("boletos_gerados").select("*", { count: "exact", head: true }),
+      supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).gte("gerado_em", isoDay),
+      supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).eq("copiado", true),
+      supabase.from("stripe_accounts").select("*", { count: "exact", head: true }).eq("ativo", true),
+      supabase.from("stripe_accounts").select("*", { count: "exact", head: true }),
+      supabase.from("boletos_gerados").select("valor").gte("gerado_em", isoDay),
+      supabase.from("boletos_gerados").select("id, nome, crm, valor, gerado_em, copiado").order("gerado_em", { ascending: false }).limit(5),
+      supabase.from("consultas").select("criado_em, encontrado").gte("criado_em", last7),
+    ]);
+
+    const valorHoje = (boletosValorAgg.data ?? []).reduce(
+      (acc, r: { valor: number | string }) => acc + Number(r.valor || 0),
+      0,
+    );
+
+    // Build last-7-days series
+    const dayBuckets: { date: string; consultas: number; encontradas: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      dayBuckets.push({
+        date: d.toISOString().slice(0, 10),
+        consultas: 0,
+        encontradas: 0,
+      });
+    }
+    (ultimasConsultas.data ?? []).forEach((c: { criado_em: string; encontrado: boolean }) => {
+      const key = new Date(c.criado_em).toISOString().slice(0, 10);
+      const b = dayBuckets.find((x) => x.date === key);
+      if (b) {
+        b.consultas += 1;
+        if (c.encontrado) b.encontradas += 1;
+      }
+    });
+
+    return {
+      debitos: debitosCount.count ?? 0,
+      consultasTotal: consultasTotal.count ?? 0,
+      consultasHoje: consultasHoje.count ?? 0,
+      consultasEncontradasHoje: consultasEncontradasHoje.count ?? 0,
+      boletosTotal: boletosTotal.count ?? 0,
+      boletosHoje: boletosHoje.count ?? 0,
+      boletosCopiadosTotal: boletosCopiadosTotal.count ?? 0,
+      stripeAtivas: stripeAtivas.count ?? 0,
+      stripeTotal: stripeTotal.count ?? 0,
+      valorHoje,
+      ultimosBoletos: (ultimosBoletos.data ?? []) as Array<{
+        id: string;
+        nome: string;
+        crm: string;
+        valor: number;
+        gerado_em: string;
+        copiado: boolean;
+      }>,
+      serie7d: dayBuckets,
+    };
+  });
