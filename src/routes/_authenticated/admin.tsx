@@ -15,7 +15,7 @@ import {
   removerStripeAccount,
   trocarNomeAgora,
   reverterNomeAgora,
-  atualizarProxyStripe,
+  
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -546,7 +546,7 @@ function StripeSection() {
   const remove = useServerFn(removerStripeAccount);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
-  const updateProxy = useServerFn(atualizarProxyStripe);
+  
 
   const [items, setItems] = useState<StripeAccount[]>([]);
   const [nome, setNome] = useState("");
@@ -558,7 +558,7 @@ function StripeSection() {
   const [origLast, setOrigLast] = useState("");
   const [replFirst, setReplFirst] = useState("");
   const [replLast, setReplLast] = useState("");
-  const [proxyUrl, setProxyUrl] = useState("");
+  
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -595,7 +595,6 @@ function StripeSection() {
           original_last_name: origLast.trim(),
           replacement_first_name: replFirst.trim(),
           replacement_last_name: replLast.trim(),
-          proxy_url: proxyUrl.trim(),
         },
       });
       if (!r.ok) {
@@ -610,7 +609,6 @@ function StripeSection() {
         setOrigLast("");
         setReplFirst("");
         setReplLast("");
-        setProxyUrl("");
         await load();
       }
     } finally {
@@ -675,15 +673,6 @@ function StripeSection() {
             </div>
           </div>
 
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Proxy HTTP (opcional — apenas para troca de nome)</div>
-            <div className="mt-2">
-              <input value={proxyUrl} onChange={(e) => setProxyUrl(e.target.value)} placeholder="http://user:pass@rp.scrapegw.com:6060" className={monoCls + " w-full"} />
-            </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Formato: http://usuário:senha@host:porta. Usado SOMENTE nas chamadas de alteração de nome na Stripe.
-            </p>
-          </div>
 
 
           <div className="flex justify-end">
@@ -793,19 +782,6 @@ function StripeSection() {
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{12}</strong> · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        defaultValue={s.proxy_url ?? ""}
-                        onBlur={async (e) => {
-                          const v = e.target.value.trim();
-                          if (v === (s.proxy_url ?? "")) return;
-                          await updateProxy({ data: { id: s.id, proxy_url: v } });
-                          load();
-                        }}
-                        placeholder="Proxy: http://user:pass@host:porta (opcional)"
-                        className="h-8 w-full max-w-md rounded-md border border-border bg-background px-2 font-mono text-[11px] outline-none focus:border-crm-green"
-                      />
                     </div>
                     {s.ultima_falha && (
                       <div className="mt-1 text-xs text-red-600">
