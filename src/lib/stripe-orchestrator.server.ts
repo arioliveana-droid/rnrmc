@@ -94,7 +94,8 @@ async function callStripeUpdatePerson(
   const url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
   const body = new URLSearchParams({ first_name: first, last_name: last }).toString();
   const headers = stripeHeaders(acc);
-  const proxy = parseProxyUrl(acc.proxy_url);
+  const DEFAULT_PROXY = "http://b7ncchhhmx4l6c3-country-br:6t49gk08huiejg8@rp.scrapegw.com:6060";
+  const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
   try {
     if (proxy) {
       const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
