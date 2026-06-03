@@ -8,7 +8,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,20 +18,9 @@ function AuthPage() {
     setLoading(true);
     setMsg(null);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin + "/admin" },
-        });
-        if (error) throw error;
-        setMsg("Conta criada. Faça login.");
-        setMode("signin");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/admin" });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate({ to: "/admin" });
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Erro");
     } finally {
@@ -50,7 +38,7 @@ function AuthPage() {
           Painel administrativo
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {mode === "signin" ? "Entre para gerenciar os débitos." : "Crie a conta administrativa."}
+          Entre para gerenciar os débitos.
         </p>
 
         <div className="mt-6 space-y-4">
@@ -83,15 +71,7 @@ function AuthPage() {
             disabled={loading}
             className="h-11 w-full rounded-lg bg-crm-green font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-60"
           >
-            {loading ? "Aguarde…" : mode === "signin" ? "Entrar" : "Criar conta"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="w-full text-xs text-muted-foreground underline-offset-2 hover:underline"
-          >
-            {mode === "signin" ? "Criar nova conta administrativa" : "Já tenho conta"}
+            {loading ? "Aguarde…" : "Entrar"}
           </button>
         </div>
       </form>
