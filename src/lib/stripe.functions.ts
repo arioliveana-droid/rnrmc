@@ -147,3 +147,11 @@ export const reverterNomeAgora = createServerFn({ method: "POST" })
     );
     return manualRevertToOriginal(data.id);
   });
+
+// Roda o tick do orquestrador: fecha janelas vencidas, reverte nomes, etc.
+export const tickOrquestrador = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { tickOrchestrator } = await import("./stripe-orchestrator.server");
+    return tickOrchestrator();
+  });

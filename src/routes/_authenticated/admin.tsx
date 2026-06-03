@@ -16,6 +16,7 @@ import {
   removerStripeAccount,
   trocarNomeAgora,
   reverterNomeAgora,
+  tickOrquestrador,
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -547,6 +548,8 @@ function StripeSection() {
   const updateToken = useServerFn(atualizarTokenStripe);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
+  const runTick = useServerFn(tickOrquestrador);
+
   
 
   const [items, setItems] = useState<StripeAccount[]>([]);
@@ -580,6 +583,31 @@ function StripeSection() {
     const t = setInterval(() => setTick((x) => x + 1), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Quando alguma janela ativa vence, dispara o tick no servidor pra fechar/reverter.
+  useEffect(() => {
+    const now = Date.now();
+    const hasExpired = items.some(
+      (s) =>
+        s.status === "active" &&
+        s.janela_termina_em &&
+        new Date(s.janela_termina_em).getTime() <= now,
+    );
+    if (!hasExpired) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await runTick();
+        if (!cancelled) await load();
+      } catch (e) {
+        console.error("tickOrquestrador", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, tick, runTick, load]);
+
 
   const handleAdd = async () => {
     setErr(null);
