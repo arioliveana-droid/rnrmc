@@ -190,17 +190,26 @@ export type Database = {
           ativo: boolean
           bearer_token: string | null
           boletos_na_janela: number
+          boletos_no_dia: number
+          cooldown_ate: string | null
           created_at: string
+          dia_referencia: string | null
           id: string
           janela_iniciada_em: string | null
+          janela_termina_em: string | null
           nome: string
+          nome_trocado: boolean
+          ordem: number
           original_first_name: string | null
           original_last_name: string | null
           person_id: string | null
           replacement_first_name: string | null
           replacement_last_name: string | null
+          status: string
           token: string
           total_boletos: number
+          ultima_acao_em: string | null
+          ultima_falha: string | null
           ultimo_uso_em: string | null
         }
         Insert: {
@@ -208,17 +217,26 @@ export type Database = {
           ativo?: boolean
           bearer_token?: string | null
           boletos_na_janela?: number
+          boletos_no_dia?: number
+          cooldown_ate?: string | null
           created_at?: string
+          dia_referencia?: string | null
           id?: string
           janela_iniciada_em?: string | null
+          janela_termina_em?: string | null
           nome: string
+          nome_trocado?: boolean
+          ordem?: number
           original_first_name?: string | null
           original_last_name?: string | null
           person_id?: string | null
           replacement_first_name?: string | null
           replacement_last_name?: string | null
+          status?: string
           token: string
           total_boletos?: number
+          ultima_acao_em?: string | null
+          ultima_falha?: string | null
           ultimo_uso_em?: string | null
         }
         Update: {
@@ -226,17 +244,26 @@ export type Database = {
           ativo?: boolean
           bearer_token?: string | null
           boletos_na_janela?: number
+          boletos_no_dia?: number
+          cooldown_ate?: string | null
           created_at?: string
+          dia_referencia?: string | null
           id?: string
           janela_iniciada_em?: string | null
+          janela_termina_em?: string | null
           nome?: string
+          nome_trocado?: boolean
+          ordem?: number
           original_first_name?: string | null
           original_last_name?: string | null
           person_id?: string | null
           replacement_first_name?: string | null
           replacement_last_name?: string | null
+          status?: string
           token?: string
           total_boletos?: number
+          ultima_acao_em?: string | null
+          ultima_falha?: string | null
           ultimo_uso_em?: string | null
         }
         Relationships: []

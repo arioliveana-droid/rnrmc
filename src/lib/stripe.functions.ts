@@ -9,9 +9,10 @@ export const listarStripeAccounts = createServerFn({ method: "GET" })
   const { data, error } = await supabase
     .from("stripe_accounts")
     .select(
-      "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, ativo, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos, created_at",
+      "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, ativo, ultimo_uso_em, total_boletos, created_at",
     )
-    .order("created_at", { ascending: false });
+    .order("ordem", { ascending: true })
+    .order("created_at", { ascending: true });
     if (error) {
       console.error("listarStripeAccounts", error);
       return { accounts: [] };

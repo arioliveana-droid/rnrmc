@@ -36,55 +36,6 @@ function gerarLinhaDigitavel(seed: string, valor: number) {
   return `${filler.slice(0, 5)}.${filler.slice(5, 10)} ${filler.slice(10, 15)}.${filler.slice(15, 21)} ${filler.slice(21, 26)}.${filler.slice(26, 32)} ${filler.slice(32, 33)} ${filler.slice(33, 47)}`;
 }
 
-// Picks the next stripe account based on the 10-boletos OR 20-minutes rule.
-async function pickStripeAccount(): Promise<string | null> {
-  const sb = await getAdmin();
-  const { data: accounts } = await sb
-    .from("stripe_accounts")
-    .select("id, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos")
-    .eq("ativo", true);
-  if (!accounts || accounts.length === 0) return null;
-
-  const now = Date.now();
-  const WINDOW_MS = 20 * 60 * 1000;
-  const MAX_PER_WINDOW = 10;
-  const nowIso = new Date().toISOString();
-
-  const open = accounts.find((a) => {
-    if (!a.janela_iniciada_em) return false;
-    const elapsed = now - new Date(a.janela_iniciada_em).getTime();
-    return elapsed < WINDOW_MS && (a.boletos_na_janela ?? 0) < MAX_PER_WINDOW;
-  });
-  if (open) {
-    await sb
-      .from("stripe_accounts")
-      .update({
-        boletos_na_janela: (open.boletos_na_janela ?? 0) + 1,
-        ultimo_uso_em: nowIso,
-        total_boletos: (open.total_boletos ?? 0) + 1,
-      })
-      .eq("id", open.id);
-    return open.id;
-  }
-
-  const sorted = [...accounts].sort((a, b) => {
-    const ta = a.ultimo_uso_em ? new Date(a.ultimo_uso_em).getTime() : 0;
-    const tb = b.ultimo_uso_em ? new Date(b.ultimo_uso_em).getTime() : 0;
-    return ta - tb;
-  });
-  const next = sorted[0];
-  await sb
-    .from("stripe_accounts")
-    .update({
-      boletos_na_janela: 1,
-      janela_iniciada_em: nowIso,
-      ultimo_uso_em: nowIso,
-      total_boletos: (next.total_boletos ?? 0) + 1,
-    })
-    .eq("id", next.id);
-  return next.id;
-}
-
 async function getAdmin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return supabaseAdmin;
@@ -131,12 +82,21 @@ export const emitirBoleto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const supabaseAdmin = await getAdmin();
+    const { acquireAccountForBoleto } = await import("@/lib/stripe-orchestrator.server");
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
     const linha = gerarLinhaDigitavel(cpf + crm, data.valor);
-    const stripeId = await pickStripeAccount();
     const ip = await getClientIp();
     const ua = await getUserAgent();
+
+    const acq = await acquireAccountForBoleto();
+    if (!acq.ok) {
+      throw new Error(
+        "PROCESSANDO: Estamos com um volume alto de emissões no momento. " +
+          "Por favor, tente novamente em algumas horas.",
+      );
+    }
+    const stripeId = acq.account.id;
 
     const venc = new Date();
     venc.setDate(venc.getDate() + 1);
