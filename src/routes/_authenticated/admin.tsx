@@ -544,6 +544,7 @@ function StripeSection() {
   const add = useServerFn(adicionarStripeAccount);
   const toggle = useServerFn(toggleStripeAccount);
   const remove = useServerFn(removerStripeAccount);
+  const updateToken = useServerFn(atualizarTokenStripe);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
   
