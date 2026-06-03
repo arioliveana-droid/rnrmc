@@ -561,7 +561,15 @@ function StripeSection() {
 
   useEffect(() => {
     load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
   }, [load]);
+
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleAdd = async () => {
     setErr(null);
