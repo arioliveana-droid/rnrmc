@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Copy, Printer } from "lucide-react";
+import { ArrowLeft, Check, Copy, Printer, FileText, ExternalLink } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { registrarCopiaBoleto } from "@/lib/debitos.functions";
 
@@ -18,6 +18,8 @@ export type EmissaoBoleto = {
   id: string;
   linha_digitavel: string;
   vencimento: string;
+  hosted_voucher_url?: string | null;
+  pdf_url?: string | null;
 };
 
 const fmtBRL = (v: number) =>
@@ -28,7 +30,18 @@ const fmtCPF = (cpf: string) => {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
 };
 
-// Campo Field reusable
+const BANCOS: Record<string, { nome: string; codigo: string }> = {
+  "001": { nome: "Banco do Brasil", codigo: "001-9" },
+  "033": { nome: "Santander", codigo: "033-7" },
+  "104": { nome: "Caixa Econômica Federal", codigo: "104-0" },
+  "237": { nome: "Bradesco", codigo: "237-2" },
+  "341": { nome: "Itaú Unibanco", codigo: "341-7" },
+  "356": { nome: "Banco Real", codigo: "356-5" },
+  "399": { nome: "HSBC", codigo: "399-9" },
+  "422": { nome: "Banco Safra", codigo: "422-7" },
+  "748": { nome: "Sicredi", codigo: "748-X" },
+};
+
 function Field({
   label,
   value,
@@ -71,6 +84,21 @@ export function BoletoView({
   );
   const hoje = new Date().toLocaleDateString("pt-BR");
 
+  // Extrai dados reais da linha digitável retornada pela Stripe
+  const dadosLinha = useMemo(() => {
+    const d = linha.replace(/\D/g, "");
+    const codBanco = d.slice(0, 3);
+    const banco = BANCOS[codBanco] ?? { nome: "Banco emissor", codigo: `${codBanco}-?` };
+    // Nosso número (posições variam por banco; usamos uma fatia consistente da linha)
+    const nossoNumero = d.slice(4, 18) || "00000000000000";
+    // Agência/código do cedente: posições típicas
+    const agencia = d.slice(20, 24) || "0000";
+    const conta = d.slice(24, 30) || "000000";
+    // Carteira
+    const carteira = d.slice(18, 20) || "17";
+    return { codBanco, banco, nossoNumero, agencia, conta, carteira };
+  }, [linha]);
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(linha.replace(/[^\d]/g, ""));
@@ -86,7 +114,6 @@ export function BoletoView({
     }
   };
 
-  // Código de barras (visual fake derivado da linha digitável)
   const bars = useMemo(() => {
     const seed = linha.replace(/\D/g, "");
     return Array.from({ length: 95 }).map((_, i) => {
@@ -97,14 +124,8 @@ export function BoletoView({
     });
   }, [linha]);
 
-  const nossoNumero = useMemo(() => {
-    const d = linha.replace(/\D/g, "");
-    return d.slice(4, 15) || "00000000000";
-  }, [linha]);
-
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_158)] print:bg-white">
-      {/* Header com ações (some na impressão) */}
       <header className="sticky top-0 z-20 border-b border-border bg-card/85 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-3">
           <button
@@ -128,7 +149,6 @@ export function BoletoView({
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6 print:px-0 print:py-0">
-        {/* Aviso instituição */}
         <div className="mb-4 rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
           <div className="flex items-start gap-3">
             <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md bg-crm-green text-primary-foreground font-bold text-sm">
@@ -145,24 +165,21 @@ export function BoletoView({
           </div>
         </div>
 
-        {/* Ficha do boleto */}
         <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-card print:rounded-none print:border-black print:shadow-none">
-          {/* Faixa banco */}
           <div className="flex items-stretch border-b-2 border-neutral-900">
             <div className="flex items-center gap-2 border-r-2 border-neutral-900 px-4 py-2">
               <div className="text-2xl font-extrabold tracking-tight text-neutral-900">
-                Banco do Brasil
+                {dadosLinha.banco.nome}
               </div>
             </div>
             <div className="flex items-center justify-center border-r-2 border-neutral-900 px-4 py-2 text-2xl font-extrabold text-neutral-900">
-              001-9
+              {dadosLinha.banco.codigo}
             </div>
             <div className="flex flex-1 items-center justify-end px-4 py-2 font-mono text-sm font-semibold tracking-wider text-neutral-900 md:text-base">
               {linha}
             </div>
           </div>
 
-          {/* Recibo do pagador (linha 1) */}
           <div className="grid grid-cols-12 border-b border-neutral-300">
             <Field
               className="col-span-8"
@@ -172,7 +189,6 @@ export function BoletoView({
             <Field className="col-span-4 border-r-0" label="Vencimento" value={venc} />
           </div>
 
-          {/* Beneficiário */}
           <div className="grid grid-cols-12 border-b border-neutral-300">
             <Field
               className="col-span-8"
@@ -182,12 +198,11 @@ export function BoletoView({
             <Field
               className="col-span-4 border-r-0"
               label="Agência / Código do beneficiário"
-              value="1615-2 / 17218964-0"
+              value={`${dadosLinha.agencia} / ${dadosLinha.conta}`}
               mono
             />
           </div>
 
-          {/* Linha de dados técnicos */}
           <div className="grid grid-cols-12 border-b border-neutral-300">
             <Field className="col-span-3" label="Data do documento" value={hoje} />
             <Field className="col-span-3" label="Nº do documento" value={debito.debito_codigo} mono />
@@ -198,13 +213,12 @@ export function BoletoView({
 
           <div className="grid grid-cols-12 border-b border-neutral-300">
             <Field className="col-span-3" label="Uso do banco" value="—" />
-            <Field className="col-span-3" label="Carteira" value="17" />
+            <Field className="col-span-3" label="Carteira" value={dadosLinha.carteira} mono />
             <Field className="col-span-2" label="Espécie" value="R$" />
             <Field className="col-span-1" label="Quantidade" value="1" />
-            <Field className="col-span-3 border-r-0" label="Nosso número" value={nossoNumero} mono />
+            <Field className="col-span-3 border-r-0" label="Nosso número" value={dadosLinha.nossoNumero} mono />
           </div>
 
-          {/* Instruções + Valor */}
           <div className="grid grid-cols-12">
             <div className="col-span-8 border-r border-b border-neutral-300 px-2.5 py-2">
               <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
@@ -232,7 +246,6 @@ export function BoletoView({
             </div>
           </div>
 
-          {/* Pagador */}
           <div className="border-b border-neutral-300 px-2.5 py-2">
             <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500">
               Pagador
@@ -245,7 +258,6 @@ export function BoletoView({
             </div>
           </div>
 
-          {/* Código de barras */}
           <div className="px-4 py-5">
             <div className="flex h-[68px] items-stretch gap-[1px]">
               {bars.map((b, i) => (
@@ -258,7 +270,6 @@ export function BoletoView({
           </div>
         </div>
 
-        {/* Bloco de ação - some na impressão */}
         <div className="mt-5 rounded-xl border border-border bg-white p-5 shadow-card print:hidden">
           <button
             onClick={handleCopy}
@@ -280,6 +291,34 @@ export function BoletoView({
               </>
             )}
           </button>
+
+          {(emissao.pdf_url || emissao.hosted_voucher_url) && (
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {emissao.pdf_url && (
+                <a
+                  href={emissao.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
+                >
+                  <FileText className="h-4 w-4" />
+                  Baixar PDF oficial
+                </a>
+              )}
+              {emissao.hosted_voucher_url && (
+                <a
+                  href={emissao.hosted_voucher_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir 2ª via online
+                </a>
+              )}
+            </div>
+          )}
+
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Cole no app do seu banco em "Pagar com código de barras" ou pague pelo Pix copia-e-cola com 5% de desconto.
           </p>

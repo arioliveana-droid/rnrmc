@@ -66,7 +66,14 @@ export function DebitoPortal({
           valor: Number(debito.valor),
         },
       });
-      setEmissao(r);
+      setEmissao({
+        id: r.id,
+        linha_digitavel: r.linha_digitavel,
+        vencimento: r.vencimento,
+        hosted_voucher_url: r.hosted_voucher_url ?? null,
+        pdf_url: r.pdf_url ?? null,
+      });
+
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("PROCESSANDO")) {
