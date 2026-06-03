@@ -152,24 +152,38 @@ async function resetDailyIfNeeded(): Promise<void> {
 }
 
 // Fecha (reverte) a janela ativa: chama Stripe pra voltar ao nome original.
+// Lock atômico (active -> closing) evita reverts duplicados quando vários
+// ticks rodam em paralelo (cron + acquireAccountForBoleto + UI).
 async function closeWindow(acc: StripeAccountRow): Promise<void> {
   const now = new Date();
+
+  const { data: locked } = await supabaseAdmin
+    .from("stripe_accounts")
+    .update({ status: "closing", ultima_acao_em: now.toISOString() })
+    .eq("id", acc.id)
+    .eq("status", "active")
+    .select(SELECT_COLS)
+    .maybeSingle();
+
+  if (!locked) return; // outro tick já está fechando essa conta
+  const a = locked as StripeAccountRow;
+
   let newStatus: AccountStatus = "cooldown";
-  let nomeTrocado = acc.nome_trocado;
-  let ultimaFalha: string | null = acc.ultima_falha;
+  let nomeTrocado = a.nome_trocado;
+  let ultimaFalha: string | null = a.ultima_falha;
 
   if (
-    acc.nome_trocado &&
-    acc.original_first_name &&
-    acc.original_last_name &&
-    acc.bearer_token &&
-    acc.account_id &&
-    acc.person_id
+    a.nome_trocado &&
+    a.original_first_name &&
+    a.original_last_name &&
+    a.bearer_token &&
+    a.account_id &&
+    a.person_id
   ) {
     const r = await callStripeUpdatePerson(
-      acc,
-      acc.original_first_name,
-      acc.original_last_name,
+      a,
+      a.original_first_name,
+      a.original_last_name,
     );
     if (r.ok) {
       nomeTrocado = false;
@@ -178,11 +192,10 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
       newStatus = "failed";
     }
   } else {
-    // sem dados pra reverter, segue pra cooldown
     nomeTrocado = false;
   }
 
-  if (newStatus === "cooldown" && acc.boletos_no_dia >= DAILY_LIMIT) {
+  if (newStatus === "cooldown" && a.boletos_no_dia >= DAILY_LIMIT) {
     newStatus = "daily_exhausted";
   }
 
@@ -203,7 +216,7 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
       ultima_falha: ultimaFalha,
       ultima_acao_em: now.toISOString(),
     })
-    .eq("id", acc.id);
+    .eq("id", a.id);
 }
 
 // Tick global: fecha janelas vencidas e zera contagem diária. Chamada pelo cron.
