@@ -690,22 +690,77 @@ function StripeSection() {
               const bearerMasked = s.bearer_token
                 ? s.bearer_token.slice(0, 6) + "…" + s.bearer_token.slice(-4)
                 : null;
+
+              const now = Date.now();
+              void tick;
+              let timerLabel: string | null = null;
+              let timerColor = "text-muted-foreground";
+              if (s.status === "active" && s.janela_termina_em) {
+                const remaining = new Date(s.janela_termina_em).getTime() - now;
+                if (remaining > 0) {
+                  const m = Math.floor(remaining / 60000);
+                  const sec = Math.floor((remaining % 60000) / 1000);
+                  timerLabel = `Janela: ${m}m ${sec.toString().padStart(2, "0")}s restantes`;
+                  timerColor = "text-emerald-700";
+                } else {
+                  timerLabel = "Janela expirada — fechando…";
+                  timerColor = "text-amber-700";
+                }
+              } else if (s.status === "cooldown" && s.cooldown_ate) {
+                const remaining = new Date(s.cooldown_ate).getTime() - now;
+                if (remaining > 0) {
+                  const m = Math.floor(remaining / 60000);
+                  timerLabel = `Cooldown: ${m}m restantes`;
+                  timerColor = "text-amber-700";
+                }
+              } else if (s.status === "daily_exhausted") {
+                timerLabel = "Limite diário atingido — libera 07:00";
+                timerColor = "text-red-700";
+              } else if (s.status === "failed") {
+                timerLabel = "Falha — verificar";
+                timerColor = "text-red-700";
+              }
+
+              const statusMap: Record<StripeAccount["status"], { label: string; cls: string }> = {
+                idle: { label: "Disponível", cls: "bg-secondary text-muted-foreground" },
+                active: { label: "Ativa (janela aberta)", cls: "bg-emerald-100 text-emerald-800" },
+                cooldown: { label: "Cooldown", cls: "bg-amber-100 text-amber-800" },
+                daily_exhausted: { label: "Esgotada no dia", cls: "bg-red-100 text-red-800" },
+                failed: { label: "Falha", cls: "bg-red-200 text-red-900" },
+              };
+              const stCfg = statusMap[s.status] ?? statusMap.idle;
+
               return (
                 <li key={s.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span
                         className={`h-2 w-2 rounded-full ${
                           s.ativo ? "bg-emerald-500" : "bg-muted-foreground/40"
                         }`}
                       />
                       <span className="text-sm font-semibold text-foreground">
-                        {s.nome}
+                        #{s.ordem || "—"} · {s.nome}
                       </span>
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        {s.ativo ? "Ativa" : "Pendente"}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${stCfg.cls}`}>
+                        {stCfg.label}
                       </span>
+                      {!s.ativo && (
+                        <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Desativada
+                        </span>
+                      )}
+                      {s.nome_trocado && (
+                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-blue-800">
+                          Nome substituído
+                        </span>
+                      )}
                     </div>
+                    {timerLabel && (
+                      <div className={`mt-1 text-xs font-semibold ${timerColor}`}>
+                        ⏱ {timerLabel}
+                      </div>
+                    )}
                     <div className="mt-1 font-mono text-xs text-muted-foreground">
                       API: {tokenMasked}
                       {bearerMasked && (
@@ -715,9 +770,13 @@ function StripeSection() {
                       )}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      Total emitido: <strong>{s.total_boletos}</strong> · Janela atual:{" "}
-                      {s.boletos_na_janela}/10 · Último uso: {fmtDate(s.ultimo_uso_em)}
+                      Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{12}</strong> · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
                     </div>
+                    {s.ultima_falha && (
+                      <div className="mt-1 text-xs text-red-600">
+                        Última falha: {s.ultima_falha}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
