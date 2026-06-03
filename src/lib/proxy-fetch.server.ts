@@ -2,8 +2,27 @@
 // Suporta apenas proxies HTTP (com CONNECT) → alvo HTTPS.
 // Formato esperado da URL do proxy: http://user:pass@host:port
 
-// @ts-expect-error - cloudflare:sockets is provided by the Workers runtime, types not installed
-import { connect } from "cloudflare:sockets";
+// cloudflare:sockets só existe no runtime do Workers. Import dinâmico evita
+// que o Vite/dev tente resolver o módulo no Node em tempo de carga.
+async function getConnect(): Promise<
+  (
+    opts: { hostname: string; port: number },
+    init?: { secureTransport?: string; allowHalfOpen?: boolean },
+  ) => {
+    writable: WritableStream<Uint8Array>;
+    readable: ReadableStream<Uint8Array>;
+    close: () => Promise<void>;
+    startTls: (opts: { servername: string }) => {
+      writable: WritableStream<Uint8Array>;
+      readable: ReadableStream<Uint8Array>;
+      close: () => Promise<void>;
+    };
+  }
+> {
+  // @ts-expect-error - cloudflare:sockets é fornecido pelo runtime do Workers
+  const mod = await import(/* @vite-ignore */ "cloudflare:sockets");
+  return mod.connect;
+}
 
 export type ProxyFetchResult = {
   status: number;
@@ -73,6 +92,7 @@ export async function proxyFetch(
       ? 443
       : 80;
 
+  const connect = await getConnect();
   const socket = connect(
     { hostname: proxy.host, port: proxy.port },
     { secureTransport: "off", allowHalfOpen: false },
