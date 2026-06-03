@@ -609,7 +609,6 @@ function StripeSection() {
         setOrigLast("");
         setReplFirst("");
         setReplLast("");
-        setProxyUrl("");
         await load();
       }
     } finally {
