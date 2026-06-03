@@ -57,6 +57,12 @@ type StripeAccount = {
   nome: string;
   token: string;
   bearer_token: string | null;
+  account_id: string | null;
+  person_id: string | null;
+  original_first_name: string | null;
+  original_last_name: string | null;
+  replacement_first_name: string | null;
+  replacement_last_name: string | null;
   ativo: boolean;
   boletos_na_janela: number;
   janela_iniciada_em: string | null;
