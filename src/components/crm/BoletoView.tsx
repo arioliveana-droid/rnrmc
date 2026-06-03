@@ -14,43 +14,32 @@ type Debito = {
   valor: number;
 };
 
+export type EmissaoBoleto = {
+  id: string;
+  linha_digitavel: string;
+  vencimento: string;
+};
+
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-function gerarLinhaDigitavel(seed: string, valor: number) {
-  // Pseudo "linha digitável" determinística (47 dígitos) baseada em CPF/CRM
-  const base = seed.replace(/\D/g, "").padEnd(11, "0");
-  const cents = Math.round(valor * 100)
-    .toString()
-    .padStart(10, "0");
-  const filler = (base + cents + "8473625190")
-    .repeat(5)
-    .replace(/\D/g, "")
-    .slice(0, 47);
-  return `${filler.slice(0, 5)}.${filler.slice(5, 10)} ${filler.slice(10, 15)}.${filler.slice(15, 21)} ${filler.slice(21, 26)}.${filler.slice(26, 32)} ${filler.slice(32, 33)} ${filler.slice(33, 47)}`;
-}
-
-function vencimento() {
-  const d = new Date();
-  d.setDate(d.getDate() + 7);
-  return d.toLocaleDateString("pt-BR");
-}
-
 export function BoletoView({
   debito,
+  emissao,
   onBack,
 }: {
   debito: Debito;
+  emissao: EmissaoBoleto;
   onBack: () => void;
 }) {
   const [copiado, setCopiado] = useState(false);
   const registrar = useServerFn(registrarCopiaBoleto);
 
-  const linha = useMemo(
-    () => gerarLinhaDigitavel(debito.cpf + debito.crm, debito.valor),
-    [debito],
+  const linha = emissao.linha_digitavel;
+  const venc = useMemo(
+    () => new Date(emissao.vencimento).toLocaleDateString("pt-BR"),
+    [emissao.vencimento],
   );
-  const venc = useMemo(() => vencimento(), []);
 
   const handleCopy = async () => {
     try {
@@ -61,22 +50,12 @@ export function BoletoView({
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2500);
     try {
-      await registrar({
-        data: {
-          nome: debito.nome,
-          cpf: debito.cpf,
-          crm: debito.crm,
-          debito_codigo: debito.debito_codigo,
-          valor: Number(debito.valor),
-          linha_digitavel: linha,
-        },
-      });
+      await registrar({ data: { id: emissao.id } });
     } catch {
       /* ignore */
     }
   };
 
-  // Barcode visual (faixas pseudoaleatórias mas estáveis)
   const bars = useMemo(() => {
     const seed = linha.replace(/\D/g, "");
     return Array.from({ length: 70 }).map((_, i) => {
@@ -104,7 +83,6 @@ export function BoletoView({
 
       <main className="mx-auto max-w-3xl px-4 py-6">
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-          {/* Cabeçalho do boleto */}
           <div className="flex items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-4">
             <div className="flex items-center gap-2.5">
               <div className="grid h-9 w-9 place-items-center rounded-md bg-crm-green text-primary-foreground">
@@ -127,7 +105,6 @@ export function BoletoView({
             </div>
           </div>
 
-          {/* Corpo */}
           <div className="p-5 md:p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -174,7 +151,6 @@ export function BoletoView({
               </div>
             </div>
 
-            {/* Código de barras visual */}
             <div className="mt-6">
               <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <Barcode className="h-3.5 w-3.5" />
@@ -182,10 +158,7 @@ export function BoletoView({
               </div>
               <div className="mt-2 flex h-20 items-center gap-[2px] overflow-hidden rounded-lg border border-border bg-white px-3">
                 {bars.map((w, i) => (
-                  <span
-                    key={i}
-                    className={`${w} h-full bg-foreground`}
-                  />
+                  <span key={i} className={`${w} h-full bg-foreground`} />
                 ))}
               </div>
               <div className="mt-3 break-all rounded-lg border border-dashed border-border bg-background px-3 py-2 text-center font-mono text-xs text-foreground md:text-sm">
@@ -193,7 +166,6 @@ export function BoletoView({
               </div>
             </div>
 
-            {/* Botão copiar */}
             <button
               onClick={handleCopy}
               className={`mt-5 inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl px-6 text-base font-bold shadow-lg transition active:translate-y-0 ${
@@ -216,7 +188,7 @@ export function BoletoView({
             </button>
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
-              Cole no app do seu banco em “Pagar com código de barras”.
+              Cole no app do seu banco em "Pagar com código de barras".
             </p>
           </div>
         </div>
