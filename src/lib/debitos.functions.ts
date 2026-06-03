@@ -83,9 +83,9 @@ export const emitirBoleto = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const supabaseAdmin = await getAdmin();
     const { acquireAccountForBoleto } = await import("@/lib/stripe-orchestrator.server");
+    const { emitirBoletoStripe } = await import("@/lib/stripe-boleto.server");
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
-    const linha = gerarLinhaDigitavel(cpf + crm, data.valor);
     const ip = await getClientIp();
     const ua = await getUserAgent();
 
@@ -96,10 +96,43 @@ export const emitirBoleto = createServerFn({ method: "POST" })
           "Por favor, tente novamente em algumas horas.",
       );
     }
-    const stripeId = acq.account.id;
+    const stripeAccount = acq.account;
 
-    const venc = new Date();
-    venc.setDate(venc.getDate() + 1);
+    // Emite boleto REAL via Stripe usando a secret key (token) da conta.
+    const stripeRes = await emitirBoletoStripe({
+      secretKey: stripeAccount.token,
+      nome: data.nome,
+      cpf,
+      valor: data.valor,
+      descricao: data.descricao,
+      diasParaVencer: 1,
+    });
+
+    let linha: string;
+    let vencimentoIso: string;
+    let paymentIntentId: string | null = null;
+    let hostedVoucherUrl: string | null = null;
+    let pdfUrl: string | null = null;
+
+    if (stripeRes.ok) {
+      linha = stripeRes.linha_digitavel;
+      vencimentoIso = stripeRes.vencimento;
+      paymentIntentId = stripeRes.payment_intent_id;
+      hostedVoucherUrl = stripeRes.hosted_voucher_url;
+      pdfUrl = stripeRes.pdf;
+    } else {
+      console.error("emitirBoletoStripe falhou", stripeRes.error);
+      // Marca a conta como falha p/ orquestrador pular ela
+      await supabaseAdmin
+        .from("stripe_accounts")
+        .update({
+          status: "failed",
+          ultima_falha: `boleto: ${stripeRes.error}`.slice(0, 500),
+          ultima_acao_em: new Date().toISOString(),
+        })
+        .eq("id", stripeAccount.id);
+      throw new Error(`Falha ao emitir boleto na Stripe: ${stripeRes.error}`);
+    }
 
     const { data: row, error } = await supabaseAdmin
       .from("boletos_gerados")
@@ -111,7 +144,11 @@ export const emitirBoleto = createServerFn({ method: "POST" })
         descricao: data.descricao,
         valor: data.valor,
         linha_digitavel: linha,
-        stripe_account_id: stripeId,
+        stripe_account_id: stripeAccount.id,
+        stripe_payment_intent_id: paymentIntentId,
+        hosted_voucher_url: hostedVoucherUrl,
+        pdf_url: pdfUrl,
+        vencimento: vencimentoIso,
         ip,
         user_agent: ua,
       })
@@ -119,14 +156,17 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       .single();
     if (error || !row) {
       console.error("emitirBoleto", error);
-      throw new Error("Não foi possível emitir o boleto.");
+      throw new Error("Não foi possível salvar o boleto emitido.");
     }
     return {
       id: row.id,
       linha_digitavel: linha,
-      vencimento: venc.toISOString(),
+      vencimento: vencimentoIso,
+      hosted_voucher_url: hostedVoucherUrl,
+      pdf_url: pdfUrl,
     };
   });
+
 
 export const listarBoletosGerados = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
