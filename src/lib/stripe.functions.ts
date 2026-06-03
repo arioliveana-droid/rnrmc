@@ -73,7 +73,12 @@ export const atualizarTokenStripe = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const patch: Record<string, unknown> = {
+    const patch: {
+      token: string;
+      status: string;
+      ultima_falha: string | null;
+      nome?: string;
+    } = {
       token: data.token,
       status: "active",
       ultima_falha: null,
