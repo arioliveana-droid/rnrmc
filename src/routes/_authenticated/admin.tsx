@@ -794,13 +794,58 @@ function StripeSection() {
                     <div className="mt-1 text-xs text-muted-foreground">
                       Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{12}</strong> · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
                     </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        defaultValue={s.proxy_url ?? ""}
+                        onBlur={async (e) => {
+                          const v = e.target.value.trim();
+                          if (v === (s.proxy_url ?? "")) return;
+                          await updateProxy({ data: { id: s.id, proxy_url: v } });
+                          load();
+                        }}
+                        placeholder="Proxy: http://user:pass@host:porta (opcional)"
+                        className="h-8 w-full max-w-md rounded-md border border-border bg-background px-2 font-mono text-[11px] outline-none focus:border-crm-green"
+                      />
+                    </div>
                     {s.ultima_falha && (
                       <div className="mt-1 text-xs text-red-600">
                         Última falha: {s.ultima_falha}
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      disabled={busyId === s.id}
+                      onClick={async () => {
+                        setBusyId(s.id);
+                        try {
+                          const r = await swapNow({ data: { id: s.id } });
+                          if (!r.ok) alert("Falha: " + r.error);
+                        } finally {
+                          setBusyId(null);
+                          load();
+                        }
+                      }}
+                      className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
+                    >
+                      Trocar nome agora
+                    </button>
+                    <button
+                      disabled={busyId === s.id}
+                      onClick={async () => {
+                        setBusyId(s.id);
+                        try {
+                          const r = await revertNow({ data: { id: s.id } });
+                          if (!r.ok) alert("Falha: " + r.error);
+                        } finally {
+                          setBusyId(null);
+                          load();
+                        }
+                      }}
+                      className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+                    >
+                      Reverter agora
+                    </button>
                     <button
                       onClick={async () => {
                         await toggle({ data: { id: s.id, ativo: !s.ativo } });
