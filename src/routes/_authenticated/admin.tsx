@@ -1,51 +1,144 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
-import { bulkImportDebitos, listarCopiasBoleto } from "@/lib/debitos.functions";
+import { useCallback, useEffect, useState } from "react";
+import {
+  bulkImportDebitos,
+  listarConsultas,
+  listarBoletosGerados,
+  emitirBoleto,
+} from "@/lib/debitos.functions";
+import {
+  listarStripeAccounts,
+  adicionarStripeAccount,
+  toggleStripeAccount,
+  removerStripeAccount,
+} from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Copia = {
+type TabId = "import" | "consultas" | "stripe" | "boletos";
+
+type Consulta = {
+  id: string;
+  cpf: string;
+  crm: string;
+  ip: string | null;
+  user_agent: string | null;
+  encontrado: boolean;
+  nome: string | null;
+  motivo: string | null;
+  criado_em: string;
+};
+
+type Boleto = {
   id: string;
   nome: string;
   cpf: string;
   crm: string;
   debito_codigo: string;
+  descricao: string | null;
   valor: number;
   linha_digitavel: string;
-  copiado_em: string;
+  stripe_account_id: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  gerado_em: string;
+  copiado: boolean;
+  copiado_em: string | null;
+  vezes_copiado: number;
 };
+
+type StripeAccount = {
+  id: string;
+  nome: string;
+  token: string;
+  ativo: boolean;
+  boletos_na_janela: number;
+  janela_iniciada_em: string | null;
+  ultimo_uso_em: string | null;
+  total_boletos: number;
+  created_at: string;
+};
+
+const tabs: Array<{ id: TabId; label: string }> = [
+  { id: "import", label: "Importar débitos" },
+  { id: "consultas", label: "Consultas" },
+  { id: "stripe", label: "Contas Stripe" },
+  { id: "boletos", label: "Boletos emitidos" },
+];
+
+const fmtDate = (s: string | null) =>
+  s ? new Date(s).toLocaleString("pt-BR") : "—";
+const fmtBRL = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 function AdminPage() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<TabId>("import");
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth" });
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-20 border-b border-border bg-card/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-crm-green-dark">
+              Painel admin
+            </div>
+            <h1 className="font-serif text-lg font-semibold text-foreground md:text-xl">
+              CRM-MG · Operações
+            </h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+          >
+            Sair
+          </button>
+        </div>
+        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 md:px-6">
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition ${
+                tab === t.id
+                  ? "bg-crm-green text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
+        {tab === "import" && <ImportSection />}
+        {tab === "consultas" && <ConsultasSection />}
+        {tab === "stripe" && <StripeSection />}
+        {tab === "boletos" && <BoletosSection />}
+      </main>
+    </div>
+  );
+}
+
+// ----------------- IMPORT -----------------
+function ImportSection() {
   const importFn = useServerFn(bulkImportDebitos);
-  const listarCopias = useServerFn(listarCopiasBoleto);
   const [raw, setRaw] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{
     inserted: number;
     errors: Array<{ line: number; raw: string; reason: string }>;
   } | null>(null);
-  const [copias, setCopias] = useState<Copia[]>([]);
-
-  const carregarCopias = async () => {
-    try {
-      const res = await listarCopias();
-      setCopias((res.copias ?? []) as Copia[]);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  useEffect(() => {
-    carregarCopias();
-    const t = setInterval(carregarCopias, 15000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleImport = async () => {
     setLoading(true);
@@ -59,125 +152,397 @@ function AdminPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" });
+  return (
+    <section>
+      <h2 className="font-serif text-2xl font-semibold text-foreground">
+        Importar débitos
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Cole as linhas no formato abaixo. Registros existentes serão atualizados.
+      </p>
+
+      <pre className="mt-6 overflow-x-auto rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground">
+{`NOME:CPF:CRM:STATUS:COD_DEBITO:DESCRICAO
+ANNA CAROLLYNE SANTOS PINTO:11075980607:105866:POSITIVO:A26:ANUIDADE 2026`}
+      </pre>
+
+      <textarea
+        value={raw}
+        onChange={(e) => setRaw(e.target.value)}
+        rows={14}
+        spellCheck={false}
+        placeholder="Cole aqui uma linha por médico…"
+        className="mt-4 w-full rounded-xl border border-border bg-card p-4 font-mono text-sm text-foreground outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+      />
+
+      <button
+        onClick={handleImport}
+        disabled={loading || !raw.trim()}
+        className="mt-4 h-11 rounded-lg bg-crm-green px-6 font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-60"
+      >
+        {loading ? "Importando…" : "Importar / atualizar"}
+      </button>
+
+      {result && (
+        <div className="mt-6 rounded-xl border border-border bg-card p-4">
+          <p className="text-sm font-semibold text-foreground">
+            {result.inserted} registro(s) importado(s).
+          </p>
+          {result.errors.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+              {result.errors.slice(0, 20).map((e, i) => (
+                <li key={i}>
+                  <span className="font-mono">linha {e.line}</span> — {e.reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ----------------- CONSULTAS -----------------
+function ConsultasSection() {
+  const fn = useServerFn(listarConsultas);
+  const [items, setItems] = useState<Consulta[]>([]);
+  const [open, setOpen] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const r = await fn();
+    setItems((r.consultas ?? []) as Consulta[]);
+  }, [fn]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  return (
+    <section>
+      <div className="flex items-end justify-between">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
+            Consultas no portal
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {items.length} consulta(s) · atualiza a cada 15s.
+          </p>
+        </div>
+        <button
+          onClick={load}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+        >
+          Atualizar
+        </button>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        {items.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Nenhuma consulta registrada ainda.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {items.map((c) => (
+              <li key={c.id}>
+                <button
+                  onClick={() => setOpen(open === c.id ? null : c.id)}
+                  className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left hover:bg-accent/50"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          c.encontrado ? "bg-emerald-500" : "bg-amber-500"
+                        }`}
+                      />
+                      <span className="truncate">
+                        {c.nome ?? `CRM ${c.crm}/MG`}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      CRM {c.crm} · CPF {c.cpf} ·{" "}
+                      <span className="font-medium">
+                        {c.encontrado ? "encontrou débito" : c.motivo ?? "não encontrado"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <div>{fmtDate(c.criado_em)}</div>
+                    <div className="font-mono">{c.ip ?? "—"}</div>
+                  </div>
+                </button>
+                {open === c.id && (
+                  <div className="border-t border-border bg-secondary/30 px-4 py-3 text-xs text-muted-foreground">
+                    <div>
+                      <span className="font-semibold text-foreground">Navegador:</span>{" "}
+                      {c.user_agent ?? "—"}
+                    </div>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ----------------- STRIPE -----------------
+function StripeSection() {
+  const list = useServerFn(listarStripeAccounts);
+  const add = useServerFn(adicionarStripeAccount);
+  const toggle = useServerFn(toggleStripeAccount);
+  const remove = useServerFn(removerStripeAccount);
+
+  const [items, setItems] = useState<StripeAccount[]>([]);
+  const [nome, setNome] = useState("");
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const r = await list();
+    setItems((r.accounts ?? []) as StripeAccount[]);
+  }, [list]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleAdd = async () => {
+    setErr(null);
+    setSaving(true);
+    try {
+      const r = await add({ data: { nome: nome.trim(), token: token.trim() } });
+      if (!r.ok) {
+        setErr(r.error ?? "Erro ao salvar.");
+      } else {
+        setNome("");
+        setToken("");
+        await load();
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
-      <div className="mx-auto max-w-3xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-3xl font-semibold text-foreground">
-              Painel — Débitos de anuidade
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Cole as linhas no formato abaixo e clique em importar.
-            </p>
-          </div>
+    <section>
+      <h2 className="font-serif text-2xl font-semibold text-foreground">
+        Contas Stripe
+      </h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Cada conta ativa atende até <strong>10 boletos</strong> ou{" "}
+        <strong>20 minutos</strong> antes de passar para a próxima.
+      </p>
+
+      <div className="mt-6 rounded-xl border border-border bg-card p-4">
+        <div className="text-sm font-semibold text-foreground">
+          Adicionar nova conta
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          A conta entra desativada — você ativa depois que concluir o processo na Stripe.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Nome/identificador"
+            className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green"
+          />
+          <input
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="sk_live_... ou sk_test_..."
+            className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green"
+          />
           <button
-            onClick={handleLogout}
-            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
+            onClick={handleAdd}
+            disabled={saving || !nome.trim() || !token.trim()}
+            className="h-10 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark disabled:opacity-60"
           >
-            Sair
+            {saving ? "Salvando…" : "Adicionar"}
           </button>
         </div>
-
-        <pre className="mt-6 overflow-x-auto rounded-lg border border-border bg-muted p-3 text-xs text-muted-foreground">
-{`NOME:CPF:CRM:STATUS:COD_DEBITO:DESCRICAO
-ANNA CAROLLYNE SANTOS PINTO:11075980607:105866:POSITIVO:A26:ANUIDADE 2026`}
-        </pre>
-
-        <textarea
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
-          rows={14}
-          spellCheck={false}
-          placeholder="Cole aqui uma linha por médico…"
-          className="mt-4 w-full rounded-xl border border-border bg-card p-4 font-mono text-sm text-foreground outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
-        />
-
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            onClick={handleImport}
-            disabled={loading || !raw.trim()}
-            className="h-11 rounded-lg bg-crm-green px-6 font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-60"
-          >
-            {loading ? "Importando…" : "Importar / atualizar"}
-          </button>
-          <span className="text-xs text-muted-foreground">
-            Registros existentes (mesmo CPF + CRM + código de débito) serão atualizados.
-          </span>
-        </div>
-
-        {result && (
-          <div className="mt-6 rounded-xl border border-border bg-card p-4">
-            <p className="text-sm font-semibold text-foreground">
-              {result.inserted} registro(s) importado(s).
-            </p>
-            {result.errors.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-crm-red-dark">
-                  {result.errors.length} erro(s):
-                </p>
-                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-                  {result.errors.slice(0, 20).map((e, i) => (
-                    <li key={i}>
-                      <span className="font-mono">linha {e.line}</span> — {e.reason}
-                      {e.raw && <span className="font-mono"> · {e.raw}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="mt-10">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="font-serif text-2xl font-semibold text-foreground">
-                Cópias do código de barras
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Médicos que copiaram o código do boleto (atualiza a cada 15s).
-              </p>
-            </div>
-            <button
-              onClick={carregarCopias}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent"
-            >
-              Atualizar
-            </button>
-          </div>
-
-          <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-            {copias.length === 0 ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">
-                Nenhuma cópia registrada ainda.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {copias.map((c) => (
-                  <li key={c.id} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{c.nome}</div>
-                      <div className="text-xs text-muted-foreground">
-                        CRM {c.crm}/MG · CPF {c.cpf} · {c.debito_codigo}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground sm:text-right">
-                      <div className="font-mono">R$ {Number(c.valor).toFixed(2)}</div>
-                      <div>{new Date(c.copiado_em).toLocaleString("pt-BR")}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
       </div>
-    </div>
+
+      <div className="mt-6 overflow-hidden rounded-xl border border-border bg-card">
+        {items.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Nenhuma conta cadastrada.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {items.map((s) => {
+              const tokenMasked =
+                s.token.slice(0, 8) + "…" + s.token.slice(-4);
+              return (
+                <li key={s.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          s.ativo ? "bg-emerald-500" : "bg-muted-foreground/40"
+                        }`}
+                      />
+                      <span className="text-sm font-semibold text-foreground">
+                        {s.nome}
+                      </span>
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        {s.ativo ? "Ativa" : "Pendente"}
+                      </span>
+                    </div>
+                    <div className="mt-1 font-mono text-xs text-muted-foreground">
+                      {tokenMasked}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Total emitido: <strong>{s.total_boletos}</strong> · Janela atual:{" "}
+                      {s.boletos_na_janela}/10 · Último uso: {fmtDate(s.ultimo_uso_em)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        await toggle({ data: { id: s.id, ativo: !s.ativo } });
+                        load();
+                      }}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                    >
+                      {s.ativo ? "Desativar" : "Ativar"}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm("Remover esta conta?")) return;
+                        await remove({ data: { id: s.id } });
+                        load();
+                      }}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }
+
+// ----------------- BOLETOS -----------------
+function BoletosSection() {
+  const fn = useServerFn(listarBoletosGerados);
+  const stripeFn = useServerFn(listarStripeAccounts);
+  const [items, setItems] = useState<Boleto[]>([]);
+  const [accounts, setAccounts] = useState<StripeAccount[]>([]);
+  const [filter, setFilter] = useState<"all" | "copied" | "uncopied">("all");
+
+  const load = useCallback(async () => {
+    const [b, s] = await Promise.all([fn(), stripeFn()]);
+    setItems((b.boletos ?? []) as Boleto[]);
+    setAccounts((s.accounts ?? []) as StripeAccount[]);
+  }, [fn, stripeFn]);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const nameOf = (id: string | null) =>
+    id ? accounts.find((a) => a.id === id)?.nome ?? "—" : "sem stripe";
+
+  const filtered = items.filter((b) => {
+    if (filter === "copied") return b.copiado;
+    if (filter === "uncopied") return !b.copiado;
+    return true;
+  });
+
+  const totalCopiados = items.filter((b) => b.copiado).length;
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
+            Boletos emitidos
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {items.length} boleto(s) · {totalCopiados} código(s) copiado(s).
+          </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 text-xs">
+          {(["all", "copied", "uncopied"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-md px-3 py-1.5 font-medium transition ${
+                filter === f
+                  ? "bg-crm-green text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {f === "all" ? "Todos" : f === "copied" ? "Copiados" : "Não copiados"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        {filtered.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            Nenhum boleto.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {filtered.map((b) => (
+              <li key={b.id} className="px-4 py-3">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <span
+                        className={`h-2 w-2 rounded-full ${
+                          b.copiado ? "bg-emerald-500" : "bg-amber-500"
+                        }`}
+                      />
+                      <span className="truncate">{b.nome}</span>
+                      {b.vezes_copiado > 1 && (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          ×{b.vezes_copiado}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      CRM {b.crm} · CPF {b.cpf} · {fmtBRL(Number(b.valor))} ·{" "}
+                      Stripe: {nameOf(b.stripe_account_id)}
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground sm:text-right">
+                    <div>Emitido: {fmtDate(b.gerado_em)}</div>
+                    <div>
+                      {b.copiado
+                        ? `Copiado: ${fmtDate(b.copiado_em)}`
+                        : "Ainda não copiou"}
+                    </div>
+                    <div className="font-mono">{b.ip ?? "—"}</div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// Re-export to silence unused-import warnings if needed
+void emitirBoleto;
