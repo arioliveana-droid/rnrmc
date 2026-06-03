@@ -93,12 +93,17 @@ async function callStripeUpdatePerson(
   }
   const url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
   const body = new URLSearchParams({ first_name: first, last_name: last }).toString();
+  const headers = stripeHeaders(acc);
+  const proxy = parseProxyUrl(acc.proxy_url);
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: stripeHeaders(acc),
-      body,
-    });
+    if (proxy) {
+      const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
+      if (r.status < 200 || r.status >= 300) {
+        return { ok: false, error: `HTTP ${r.status} (proxy): ${r.text.slice(0, 300)}` };
+      }
+      return { ok: true };
+    }
+    const res = await fetch(url, { method: "POST", headers, body });
     if (!res.ok) {
       const txt = await res.text();
       return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 300)}` };
