@@ -40,9 +40,26 @@ const BANCOS: Record<string, { nome: string; codigo: string }> = {
   "356": { nome: "Banco Real", codigo: "356-5" },
   "399": { nome: "HSBC", codigo: "399-9" },
   "422": { nome: "Banco Safra", codigo: "422-7" },
+  "745": { nome: "Citibank", codigo: "745-5" },
   "748": { nome: "Sicredi", codigo: "748-X" },
 };
-const BANCO_DEFAULT = BANCOS["341"];
+
+function formatLinhaDigitavel(linha: string) {
+  const d = linha.replace(/\D/g, "");
+  if (d.length !== 47) return linha;
+  return `${d.slice(0, 5)}.${d.slice(5, 10)} ${d.slice(10, 15)}.${d.slice(15, 21)} ${d.slice(21, 26)}.${d.slice(26, 32)} ${d.slice(32, 33)} ${d.slice(33, 47)}`;
+}
+
+function linhaToBarcode(linha: string) {
+  const digits = linha.replace(/\D/g, "");
+  if (digits.length !== 47) return digits.padEnd(44, "0").slice(0, 44);
+  const campo1 = digits.slice(0, 9);
+  const campo2 = digits.slice(10, 20);
+  const campo3 = digits.slice(21, 31);
+  const dv = digits.slice(32, 33);
+  const fatorEValor = digits.slice(33, 47);
+  return `${campo1.slice(0,4)}${dv}${fatorEValor}${campo1.slice(4,9)}${campo2}${campo3}`;
+}
 
 function Field({
   label,
@@ -89,7 +106,7 @@ export function BoletoView({
   const dadosLinha = useMemo(() => {
     const d = linha.replace(/\D/g, "");
     const codBanco = d.slice(0, 3);
-    const banco = BANCOS[codBanco] ?? BANCO_DEFAULT;
+    const banco = BANCOS[codBanco] ?? { nome: "Banco", codigo: `${codBanco}-X` };
     const nossoNumero = d.slice(4, 18) || "00000000000000";
     const agencia = d.slice(20, 24) || "0000";
     const conta = d.slice(24, 30) || "000000";
@@ -97,10 +114,8 @@ export function BoletoView({
     return { codBanco, banco, nossoNumero, agencia, conta, carteira };
   }, [linha]);
 
-  // 44-digit barcode value (boletos use Interleaved 2 of 5, 44 dígitos)
-  const barcodeValue = useMemo(() => {
-    return linha.replace(/\D/g, "").slice(0, 44).padEnd(44, "0");
-  }, [linha]);
+  const linhaFormatada = useMemo(() => formatLinhaDigitavel(linha), [linha]);
+  const barcodeValue = useMemo(() => linhaToBarcode(linha), [linha]);
 
   const handleCopy = async () => {
     try {
@@ -221,8 +236,8 @@ export function BoletoView({
 
               </div>
 
-              <div className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13.5px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200">
-                {linha}
+              <div className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200">
+                {linhaFormatada}
               </div>
 
               <button
@@ -317,119 +332,214 @@ export function BoletoView({
 
 
         {/* ========= DESKTOP / PRINT VIEW ========= */}
-        <div className="hidden md:block print:block">
-          <div className="mb-4 rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
-            <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md bg-crm-green text-primary-foreground font-bold text-sm">
-                CRM
-              </div>
+        <div className="hidden md:block print:block boleto-print-container">
+          
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
+            <div className="flex items-center gap-4">
+              <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-12 w-auto object-contain" />
               <div className="min-w-0">
-                <div className="text-sm font-semibold text-foreground">
+                <div className="text-sm font-bold text-foreground">
                   CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  CNPJ 17.218.964/0001-30 · Rua dos Timbiras, 1.200 — Funcionários · Belo Horizonte/MG · CEP 30.140-064
+                  CNPJ 17.218.964/0001-30 · Rua dos Timbiras, 1.200 — Funcionários · Belo Horizonte/MG
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-card print:rounded-none print:border-black print:shadow-none boleto-print-container">
-            <div className="flex items-stretch border-b-2 border-neutral-900 print:border-black">
-              <div className="flex items-center gap-2 border-r-2 border-neutral-900 print:border-black px-4 py-2">
-                <div className="grid h-8 w-8 place-items-center rounded-md bg-crm-green text-primary-foreground text-[11px] font-extrabold">
-                  CRM
-                </div>
-                <div className="text-xl font-extrabold tracking-tight text-neutral-900">
-                  CRM-MG
-                </div>
-              </div>
-              <div className="flex flex-1 items-center justify-end px-4 py-2 font-mono text-sm font-semibold tracking-wider text-neutral-900 md:text-base">
-                {linha}
-              </div>
-            </div>
-
-
-            <div className="grid grid-cols-12 border-b border-neutral-300">
-              <Field
-                className="col-span-8"
-                label="Local de pagamento"
-                value="Pagável em qualquer banco, lotérica ou app bancário até o vencimento."
-              />
-              <Field className="col-span-4 border-r-0" label="Vencimento" value={venc} />
-            </div>
-
-            <div className="grid grid-cols-12 border-b border-neutral-300">
-              <Field
-                className="col-span-8"
-                label="Beneficiário"
-                value="CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS"
-              />
-              <Field
-                className="col-span-4 border-r-0"
-                label="Agência / Código do beneficiário"
-                value={`${dadosLinha.agencia} / ${dadosLinha.conta}`}
-                mono
-              />
-            </div>
-
-            <div className="grid grid-cols-12 border-b border-neutral-300">
-              <Field className="col-span-3" label="Data do documento" value={hoje} />
-              <Field className="col-span-3" label="Nº do documento" value={debito.debito_codigo} mono />
-              <Field className="col-span-2" label="Espécie doc." value="DM" />
-              <Field className="col-span-1" label="Aceite" value="N" />
-              <Field className="col-span-3 border-r-0" label="Data processamento" value={hoje} />
-            </div>
-
-            <div className="grid grid-cols-12 border-b border-neutral-300 print:border-black">
-              <Field className="col-span-3" label="Uso do banco" value="—" />
-              <Field className="col-span-2" label="Carteira" value={dadosLinha.carteira} mono />
-              <Field className="col-span-2" label="Espécie" value="R$" />
-              <Field className="col-span-2" label="Quantidade" value="1" />
-              <Field className="col-span-3 border-r-0" label="Nosso número" value={dadosLinha.nossoNumero} mono />
-            </div>
-
-            <div className="grid grid-cols-12">
-              <div className="col-span-8 border-r border-b border-neutral-300 print:border-black px-2.5 py-2">
-                <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
-                  Instruções (texto de responsabilidade do beneficiário)
-                </div>
-                <ul className="mt-1.5 space-y-1 text-[12px] leading-snug text-neutral-800 print:text-black">
-                  <li>• Referente à <strong>{debito.descricao}</strong>.</li>
-                  <li>• Não receber após o vencimento.</li>
-                  <li>• Em caso de dúvida, contatar a Tesouraria do CRM-MG.</li>
-                </ul>
-              </div>
-              <div className="col-span-4 border-b border-neutral-300 print:border-black">
-                <Field label="(=) Valor do documento" value={fmtBRL(Number(debito.valor))} className="border-r-0" />
-                <Field label="(−) Descontos / Abatimentos" value="—" className="border-r-0" />
-                <Field label="(+) Juros / Multa" value="—" className="border-r-0" />
-                <div className="border-b-0 border-r-0 border-neutral-300 bg-neutral-50 px-2.5 py-2 print:bg-white print:border-black">
-                  <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
-                    (=) Valor cobrado
-                  </div>
-                  <div className="mt-0.5 text-lg font-bold text-neutral-900 print:text-black">
-                    {fmtBRL(Number(debito.valor))}
-                  </div>
-                </div>
+          <div className="w-full max-w-[800px] bg-white print:max-w-none">
+            {/* Recibo do Pagador */}
+            <div className="mb-6 border border-black p-0 print:border-none">
+              <table className="w-full border-collapse border-black text-[10px] leading-tight text-black">
+                <tbody>
+                  <tr>
+                    <td colSpan={2} className="border-b border-black p-2">
+                      <div className="flex items-center justify-between">
+                        <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-10 w-auto object-contain grayscale print:grayscale-0" />
+                        <div className="text-sm font-bold tracking-widest">{linhaFormatada}</div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border-b border-r border-black p-1 align-top w-2/3">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
+                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS</div>
+                    </td>
+                    <td className="border-b border-black p-1 align-top w-1/3">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
+                      <div className="font-semibold mt-0.5">{dadosLinha.agencia} / {dadosLinha.conta}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
+                      <div className="font-semibold mt-0.5">{debito.nome}</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/MG</div>
+                    </td>
+                    <td className="border-b border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Vencimento</div>
+                      <div className="font-semibold mt-0.5">{venc}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Nº do Documento</div>
+                      <div className="font-semibold mt-0.5">{debito.debito_codigo}</div>
+                    </td>
+                    <td className="border-b border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Valor do Documento</div>
+                      <div className="font-bold mt-0.5">{fmtBRL(Number(debito.valor))}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} className="border-b border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Instruções</div>
+                      <div className="mt-1">
+                        - Referente à <strong>{debito.descricao}</strong>.<br/>
+                        - Pagável em qualquer banco, lotérica ou app bancário até o vencimento.<br/>
+                        - Não receber após o vencimento.
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="w-full text-right text-[10px] p-1 font-semibold border-t border-dashed border-black">
+                Recibo do Pagador
               </div>
             </div>
 
-            <div className="border-b border-neutral-300 print:border-black px-2.5 py-2">
-              <div className="text-[9px] font-medium uppercase tracking-wide text-neutral-500 print:text-neutral-800">
-                Pagador
+            {/* Boleto principal */}
+            <div className="border border-black p-0 print:border-none">
+              <table className="w-full border-collapse border-black text-[10px] leading-tight text-black table-fixed">
+                <tbody>
+                  <tr>
+                    <td colSpan={7} className="border-b-2 border-black p-2">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 border-r-2 border-black pr-4">
+                          <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-10 w-auto object-contain grayscale print:grayscale-0" />
+                        </div>
+                        <div className="flex-shrink-0 border-r-2 border-black px-4 text-2xl font-bold">
+                          {dadosLinha.banco.codigo}
+                        </div>
+                        <div className="flex-1 text-right text-[15px] sm:text-lg font-bold tracking-wider">
+                          {linhaFormatada}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={5} className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Local de pagamento</div>
+                      <div className="font-semibold mt-0.5">Pagável em qualquer banco, lotérica ou app bancário até o vencimento.</div>
+                    </td>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px] bg-neutral-100 print:bg-transparent">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Vencimento</div>
+                      <div className="font-semibold mt-0.5 text-right">{venc}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={5} className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
+                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS</div>
+                    </td>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
+                      <div className="font-semibold mt-0.5 text-right">{dadosLinha.agencia} / {dadosLinha.conta}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Data do documento</div>
+                      <div className="font-semibold mt-0.5">{hoje}</div>
+                    </td>
+                    <td colSpan={2} className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Nº do documento</div>
+                      <div className="font-semibold mt-0.5">{debito.debito_codigo}</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Espécie doc.</div>
+                      <div className="font-semibold mt-0.5">DM</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Aceite</div>
+                      <div className="font-semibold mt-0.5">N</div>
+                    </td>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Data processamento</div>
+                      <div className="font-semibold mt-0.5 text-right">{hoje}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="border-b border-r border-black p-1 align-top w-[15%]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Uso do banco</div>
+                      <div className="font-semibold mt-0.5">—</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top w-[12%]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Carteira</div>
+                      <div className="font-semibold mt-0.5">{dadosLinha.carteira}</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top w-[10%]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Espécie</div>
+                      <div className="font-semibold mt-0.5">R$</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top w-[12%]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Quantidade</div>
+                      <div className="font-semibold mt-0.5">1</div>
+                    </td>
+                    <td className="border-b border-r border-black p-1 align-top w-[18%]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Valor (x)</div>
+                      <div className="font-semibold mt-0.5">—</div>
+                    </td>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Nosso número</div>
+                      <div className="font-semibold mt-0.5 text-right">{dadosLinha.nossoNumero}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={5} rowSpan={4} className="border-b border-r border-black p-1 align-top h-[100px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Instruções (texto de responsabilidade do beneficiário)</div>
+                      <div className="mt-1 text-xs">
+                        - Referente à <strong>{debito.descricao}</strong>.<br/>
+                        - Não receber após o vencimento.<br/>
+                        - Em caso de dúvida, contatar a Tesouraria do CRM-MG.
+                      </div>
+                    </td>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">(=) Valor do documento</div>
+                      <div className="font-bold mt-0.5 text-right">{fmtBRL(Number(debito.valor))}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">(-) Descontos / Abatimentos</div>
+                      <div className="font-semibold mt-0.5 text-right">—</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">(+) Juros / Multa</div>
+                      <div className="font-semibold mt-0.5 text-right">—</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} className="border-b border-black p-1 align-top w-[180px] bg-neutral-100 print:bg-transparent">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">(=) Valor cobrado</div>
+                      <div className="font-bold mt-0.5 text-right text-base">{fmtBRL(Number(debito.valor))}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={7} className="border-black p-1 align-top">
+                      <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
+                      <div className="font-semibold mt-0.5">{debito.nome}</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/MG</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div className="mt-4 pb-4 flex justify-end pr-8 print:justify-start print:pr-0">
+                <Barcode value={barcodeValue} height={60} className="block h-[60px] w-full max-w-[420px]" />
               </div>
-              <div className="mt-0.5 text-[13px] font-semibold text-neutral-900 print:text-black">
-                {debito.nome}
-              </div>
-              <div className="text-[12px] text-neutral-700 print:text-neutral-800">
-                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/MG
-              </div>
-            </div>
-
-            {/* Código de barras real (ITF) */}
-            <div className="px-4 py-4">
-              <Barcode value={barcodeValue} height={70} className="block h-[70px] w-full max-w-[520px]" />
             </div>
           </div>
 
