@@ -3,6 +3,7 @@
 // limites de janela (20 min / 12 boletos) + cooldown 2h + corte diário 07:00 BRT.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
 
 export const WINDOW_MINUTES = 20;
 export const WINDOW_MAX_BOLETOS = 12;
@@ -29,6 +30,7 @@ export type StripeAccountRow = {
   original_last_name: string | null;
   replacement_first_name: string | null;
   replacement_last_name: string | null;
+  proxy_url: string | null;
   ativo: boolean;
   ordem: number;
   status: AccountStatus;
@@ -57,7 +59,7 @@ export function businessDay(now: Date = new Date()): string {
 }
 
 const SELECT_COLS =
-  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em";
+  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em";
 
 function stripeHeaders(acc: StripeAccountRow): Record<string, string> {
   const accId = acc.account_id ?? "";
@@ -91,12 +93,17 @@ async function callStripeUpdatePerson(
   }
   const url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
   const body = new URLSearchParams({ first_name: first, last_name: last }).toString();
+  const headers = stripeHeaders(acc);
+  const proxy = parseProxyUrl(acc.proxy_url);
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: stripeHeaders(acc),
-      body,
-    });
+    if (proxy) {
+      const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
+      if (r.status < 200 || r.status >= 300) {
+        return { ok: false, error: `HTTP ${r.status} (proxy): ${r.text.slice(0, 300)}` };
+      }
+      return { ok: true };
+    }
+    const res = await fetch(url, { method: "POST", headers, body });
     if (!res.ok) {
       const txt = await res.text();
       return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 300)}` };
@@ -338,4 +345,86 @@ export async function acquireAccountForBoleto(): Promise<
   }
 
   return { ok: false, reason: "all_busy", detail: lastErr };
+}
+
+// Manual: força troca para o nome substituto (sem mexer em janelas/contadores).
+export async function manualSwapToReplacement(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  const acc = row as StripeAccountRow | null;
+  if (!acc) return { ok: false, error: "Conta não encontrada" };
+  if (!acc.replacement_first_name || !acc.replacement_last_name) {
+    return { ok: false, error: "Faltam nomes substitutos" };
+  }
+  const r = await callStripeUpdatePerson(
+    acc,
+    acc.replacement_first_name,
+    acc.replacement_last_name,
+  );
+  const nowIso = new Date().toISOString();
+  if (!r.ok) {
+    await supabaseAdmin
+      .from("stripe_accounts")
+      .update({
+        ultima_falha: `manual-swap: ${r.error}`,
+        ultima_acao_em: nowIso,
+      })
+      .eq("id", id);
+    return r;
+  }
+  await supabaseAdmin
+    .from("stripe_accounts")
+    .update({
+      nome_trocado: true,
+      ultima_falha: null,
+      ultima_acao_em: nowIso,
+    })
+    .eq("id", id);
+  return { ok: true };
+}
+
+// Manual: força reversão para o nome original (sem mexer em janelas/contadores).
+export async function manualRevertToOriginal(
+  id: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  const acc = row as StripeAccountRow | null;
+  if (!acc) return { ok: false, error: "Conta não encontrada" };
+  if (!acc.original_first_name || !acc.original_last_name) {
+    return { ok: false, error: "Faltam nomes originais" };
+  }
+  const r = await callStripeUpdatePerson(
+    acc,
+    acc.original_first_name,
+    acc.original_last_name,
+  );
+  const nowIso = new Date().toISOString();
+  if (!r.ok) {
+    await supabaseAdmin
+      .from("stripe_accounts")
+      .update({
+        ultima_falha: `manual-revert: ${r.error}`,
+        ultima_acao_em: nowIso,
+      })
+      .eq("id", id);
+    return r;
+  }
+  await supabaseAdmin
+    .from("stripe_accounts")
+    .update({
+      nome_trocado: false,
+      ultima_falha: null,
+      ultima_acao_em: nowIso,
+    })
+    .eq("id", id);
+  return { ok: true };
 }

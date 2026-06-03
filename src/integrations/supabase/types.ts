@@ -203,6 +203,7 @@ export type Database = {
           original_first_name: string | null
           original_last_name: string | null
           person_id: string | null
+          proxy_url: string | null
           replacement_first_name: string | null
           replacement_last_name: string | null
           status: string
@@ -230,6 +231,7 @@ export type Database = {
           original_first_name?: string | null
           original_last_name?: string | null
           person_id?: string | null
+          proxy_url?: string | null
           replacement_first_name?: string | null
           replacement_last_name?: string | null
           status?: string
@@ -257,6 +259,7 @@ export type Database = {
           original_first_name?: string | null
           original_last_name?: string | null
           person_id?: string | null
+          proxy_url?: string | null
           replacement_first_name?: string | null
           replacement_last_name?: string | null
           status?: string
