@@ -236,13 +236,17 @@ export function BoletoView({
 
               </div>
 
-              <div className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200">
+              <div 
+                onClick={handleCopy}
+                className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200 cursor-pointer hover:bg-neutral-100 transition-colors active:scale-[0.99] active:bg-neutral-200"
+                title="Clique para copiar"
+              >
                 {linhaFormatada}
               </div>
 
               <button
                 onClick={handleCopy}
-                className={`mt-3 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-bold shadow-lg transition-all active:scale-[0.98] ${
+                className={`mt-3 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[15px] font-bold shadow-lg transition-all active:scale-[0.98] ${
                   copiado
                     ? "bg-emerald-600 text-white shadow-emerald-600/30"
                     : "bg-crm-green text-primary-foreground shadow-crm-green/40"
@@ -254,7 +258,7 @@ export function BoletoView({
                   </>
                 ) : (
                   <>
-                    <Copy className="h-5 w-5" /> Copiar código
+                    <Copy className="h-5 w-5" /> Copiar linha digitável
                   </>
                 )}
               </button>
@@ -538,7 +542,7 @@ export function BoletoView({
                 </tbody>
               </table>
               <div className="mt-4 pb-4 flex justify-end pr-8 print:justify-start print:pr-0">
-                <Barcode value={barcodeValue} height={60} className="block w-[360px] max-w-full" />
+                <Barcode value={barcodeValue} height={75} className="block w-[460px] max-w-full" />
               </div>
             </div>
           </div>
