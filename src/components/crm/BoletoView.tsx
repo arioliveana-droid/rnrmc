@@ -237,33 +237,27 @@ export function BoletoView({
               </p>
             </div>
 
-            {/* PDF / 2ª via */}
-            {(emissao.pdf_url || emissao.hosted_voucher_url) && (
-              <div className="mt-3 grid gap-2">
-                {emissao.pdf_url && (
-                  <a
-                    href={emissao.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-semibold text-white shadow-md transition active:scale-[0.98]"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Baixar boleto em PDF
-                  </a>
-                )}
-                {emissao.hosted_voucher_url && (
-                  <a
-                    href={emissao.hosted_voucher_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-foreground shadow-sm transition active:scale-[0.98]"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Abrir 2ª via online
-                  </a>
-                )}
-              </div>
-            )}
+            {/* PDF customizado */}
+            <div className="mt-3 grid gap-2">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-semibold text-white shadow-md transition active:scale-[0.98]"
+              >
+                <FileText className="h-4 w-4" />
+                Salvar boleto em PDF
+              </button>
+              {emissao.hosted_voucher_url && (
+                <a
+                  href={emissao.hosted_voucher_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-foreground shadow-sm transition active:scale-[0.98]"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir 2ª via online
+                </a>
+              )}
+            </div>
 
             {/* Dados detalhados */}
             <div className="mt-3 rounded-2xl bg-white p-4 shadow-card ring-1 ring-black/5">
@@ -444,32 +438,26 @@ export function BoletoView({
               )}
             </button>
 
-            {(emissao.pdf_url || emissao.hosted_voucher_url) && (
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {emissao.pdf_url && (
-                  <a
-                    href={emissao.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Baixar PDF oficial
-                  </a>
-                )}
-                {emissao.hosted_voucher_url && (
-                  <a
-                    href={emissao.hosted_voucher_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Abrir 2ª via online
-                  </a>
-                )}
-              </div>
-            )}
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <button
+                onClick={() => window.print()}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
+              >
+                <FileText className="h-4 w-4" />
+                Salvar como PDF
+              </button>
+              {emissao.hosted_voucher_url && (
+                <a
+                  href={emissao.hosted_voucher_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir 2ª via online
+                </a>
+              )}
+            </div>
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
               Cole no app do seu banco em "Pagar com código de barras".

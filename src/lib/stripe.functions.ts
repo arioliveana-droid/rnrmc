@@ -169,3 +169,47 @@ export const tickOrquestrador = createServerFn({ method: "POST" })
     const { tickOrchestrator } = await import("./stripe-orchestrator.server");
     return tickOrchestrator();
   });
+
+// Atualiza todos os campos editáveis de uma conta Stripe.
+export const atualizarStripeAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        nome: z.string().min(1).max(120),
+        token: z.string().min(8).max(500),
+        bearer_token: z.string().max(1000).optional().or(z.literal("")),
+        account_id: z.string().max(200).optional().or(z.literal("")),
+        person_id: z.string().max(200).optional().or(z.literal("")),
+        original_first_name: z.string().max(120).optional().or(z.literal("")),
+        original_last_name: z.string().max(120).optional().or(z.literal("")),
+        replacement_first_name: z.string().max(120).optional().or(z.literal("")),
+        replacement_last_name: z.string().max(120).optional().or(z.literal("")),
+        proxy_url: z.string().max(500).optional().or(z.literal("")),
+        ordem: z.number().int().min(0),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("stripe_accounts")
+      .update({
+        nome: data.nome,
+        token: data.token.trim(),
+        bearer_token: data.bearer_token || null,
+        account_id: data.account_id || null,
+        person_id: data.person_id || null,
+        original_first_name: data.original_first_name || null,
+        original_last_name: data.original_last_name || null,
+        replacement_first_name: data.replacement_first_name || null,
+        replacement_last_name: data.replacement_last_name || null,
+        proxy_url: data.proxy_url || null,
+        ordem: data.ordem,
+        ultima_acao_em: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    if (error) return { ok: false as const, error: error.message };
+    return { ok: true as const };
+  });

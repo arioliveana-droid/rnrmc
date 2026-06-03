@@ -17,6 +17,7 @@ import {
   trocarNomeAgora,
   reverterNomeAgora,
   tickOrquestrador,
+  atualizarStripeAccount,
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -549,8 +550,52 @@ function StripeSection() {
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
   const runTick = useServerFn(tickOrquestrador);
+  const updateAccount = useServerFn(atualizarStripeAccount);
 
-  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    nome: "", token: "", bearer_token: "", account_id: "", person_id: "",
+    original_first_name: "", original_last_name: "",
+    replacement_first_name: "", replacement_last_name: "",
+    proxy_url: "", ordem: 0,
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editErr, setEditErr] = useState<string | null>(null);
+
+  const openEdit = (s: StripeAccount) => {
+    setEditingId(s.id);
+    setEditForm({
+      nome: s.nome,
+      token: s.token,
+      bearer_token: s.bearer_token ?? "",
+      account_id: s.account_id ?? "",
+      person_id: s.person_id ?? "",
+      original_first_name: s.original_first_name ?? "",
+      original_last_name: s.original_last_name ?? "",
+      replacement_first_name: s.replacement_first_name ?? "",
+      replacement_last_name: s.replacement_last_name ?? "",
+      proxy_url: s.proxy_url ?? "",
+      ordem: s.ordem,
+    });
+    setEditErr(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    setEditSaving(true);
+    setEditErr(null);
+    try {
+      const r = await updateAccount({ data: { id: editingId, ...editForm } });
+      if (!r.ok) {
+        setEditErr((r as { ok: false; error?: string }).error ?? "Erro ao salvar.");
+        return;
+      }
+      setEditingId(null);
+      await load();
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const [items, setItems] = useState<StripeAccount[]>([]);
   const [nome, setNome] = useState("");
@@ -852,30 +897,14 @@ function StripeSection() {
                       Reverter agora
                     </button>
                     <button
-                      disabled={busyId === s.id}
-                      onClick={async () => {
-                        const novo = prompt(
-                          `Nova chave da Stripe para "${s.nome}"\n(sk_live_, sk_test_, rk_live_ ou rk_test_):`,
-                          "",
-                        );
-                        if (!novo) return;
-                        const t = novo.trim();
-                        if (!/^(sk|rk)_(live|test)_/.test(t)) {
-                          alert("Chave inválida. Use sk_live_, sk_test_, rk_live_ ou rk_test_.");
-                          return;
-                        }
-                        setBusyId(s.id);
-                        try {
-                          const r = await updateToken({ data: { id: s.id, token: t } });
-                          if (!r.ok) alert("Falha: " + r.error);
-                        } finally {
-                          setBusyId(null);
-                          load();
-                        }
-                      }}
-                      className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+                      onClick={() => editingId === s.id ? setEditingId(null) : openEdit(s)}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+                        editingId === s.id
+                          ? "border-border bg-secondary text-foreground"
+                          : "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                      }`}
                     >
-                      Editar chave
+                      {editingId === s.id ? "Cancelar" : "Editar"}
                     </button>
                     <button
                       onClick={async () => {
@@ -897,6 +926,67 @@ function StripeSection() {
                       Remover
                     </button>
                   </div>
+
+                  {/* ---- Formulário de edição inline ---- */}
+                  {editingId === s.id && (
+                    <div className="mt-3 space-y-4 rounded-xl border border-border bg-background p-4">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Editar conta</div>
+
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-medium text-muted-foreground mb-1">Nome / identificador</label>
+                          <input value={editForm.nome} onChange={(e) => setEditForm((f) => ({ ...f, nome: e.target.value }))} placeholder="Nome" className={inputCls + " w-full"} />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-medium text-muted-foreground mb-1">Ordem</label>
+                          <input type="number" min={0} value={editForm.ordem} onChange={(e) => setEditForm((f) => ({ ...f, ordem: parseInt(e.target.value) || 0 }))} className={inputCls + " w-full"} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-muted-foreground mb-1">Chave API (token)</label>
+                        <input value={editForm.token} onChange={(e) => setEditForm((f) => ({ ...f, token: e.target.value }))} placeholder="sk_live_..." className={monoCls + " w-full"} />
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Sessão capturada</div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <input value={editForm.bearer_token} onChange={(e) => setEditForm((f) => ({ ...f, bearer_token: e.target.value }))} placeholder="Bearer (uk_...)" className={monoCls} />
+                          <input value={editForm.account_id} onChange={(e) => setEditForm((f) => ({ ...f, account_id: e.target.value }))} placeholder="Account ID (acct_...)" className={monoCls} />
+                          <input value={editForm.person_id} onChange={(e) => setEditForm((f) => ({ ...f, person_id: e.target.value }))} placeholder="Person ID (person_...)" className={monoCls} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Nome original (na Stripe hoje)</div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <input value={editForm.original_first_name} onChange={(e) => setEditForm((f) => ({ ...f, original_first_name: e.target.value }))} placeholder="First name original" className={inputCls} />
+                          <input value={editForm.original_last_name} onChange={(e) => setEditForm((f) => ({ ...f, original_last_name: e.target.value }))} placeholder="Last name original" className={inputCls} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Nome para substituição</div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <input value={editForm.replacement_first_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_first_name: e.target.value }))} placeholder="First name novo" className={inputCls} />
+                          <input value={editForm.replacement_last_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_last_name: e.target.value }))} placeholder="Last name novo" className={inputCls} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-medium text-muted-foreground mb-1">Proxy URL</label>
+                        <input value={editForm.proxy_url} onChange={(e) => setEditForm((f) => ({ ...f, proxy_url: e.target.value }))} placeholder="http://user:pass@host:port" className={monoCls + " w-full"} />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+                        {editErr ? <p className="text-xs text-red-600">{editErr}</p> : <span />}
+                        <div className="flex gap-2">
+                          <button onClick={() => setEditingId(null)} className="h-9 rounded-lg border border-border px-4 text-xs font-medium text-muted-foreground hover:bg-accent">Cancelar</button>
+                          <button onClick={handleSaveEdit} disabled={editSaving} className="h-9 rounded-lg bg-crm-green px-5 text-xs font-semibold text-primary-foreground hover:bg-crm-green-dark disabled:opacity-60">{editSaving ? "Salvando…" : "Salvar alterações"}</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}
