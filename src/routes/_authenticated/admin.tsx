@@ -544,6 +544,9 @@ function StripeSection() {
   const add = useServerFn(adicionarStripeAccount);
   const toggle = useServerFn(toggleStripeAccount);
   const remove = useServerFn(removerStripeAccount);
+  const swapNow = useServerFn(trocarNomeAgora);
+  const revertNow = useServerFn(reverterNomeAgora);
+  const updateProxy = useServerFn(atualizarProxyStripe);
 
   const [items, setItems] = useState<StripeAccount[]>([]);
   const [nome, setNome] = useState("");
@@ -555,7 +558,9 @@ function StripeSection() {
   const [origLast, setOrigLast] = useState("");
   const [replFirst, setReplFirst] = useState("");
   const [replLast, setReplLast] = useState("");
+  const [proxyUrl, setProxyUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
