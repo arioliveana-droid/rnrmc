@@ -82,7 +82,7 @@ export function DebitoPortal({
             "Por favor, tente novamente em algumas horas.",
         );
       } else {
-        setErro("Não foi possível emitir o boleto. Tente novamente.");
+        setErro(msg.replace(/^Falha ao emitir boleto na Stripe:\s*/i, "") || "Não foi possível emitir o boleto. Tente novamente.");
       }
     } finally {
       setEmitindo(false);
