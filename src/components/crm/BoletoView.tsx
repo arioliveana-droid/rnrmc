@@ -144,135 +144,164 @@ export function BoletoView({
 
       <main className="mx-auto max-w-4xl px-3 py-4 sm:px-4 sm:py-6 print:px-0 print:py-0">
         {/* ========= MOBILE VIEW ========= */}
-        <div className="md:hidden print:hidden">
-          {/* Hero card */}
-          <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
-            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-crm-green-dark">
-              <Building2 className="h-3.5 w-3.5" />
-              CRM-MG
-            </div>
-            <div className="mt-1 text-xs leading-snug text-muted-foreground">
-              Conselho Regional de Medicina do Estado de Minas Gerais
-            </div>
+        <div className="md:hidden print:hidden -mx-3 -my-4 pb-32">
+          {/* Premium hero with brand gradient */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-crm-green-dark via-crm-green to-crm-green-dark px-5 pt-6 pb-7 text-white">
+            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -bottom-16 -left-10 h-44 w-44 rounded-full bg-white/5 blur-3xl" />
 
-            <div className="mt-5 flex items-end justify-between gap-3">
-              <div>
-                <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Valor a pagar
+            <div className="relative flex items-center gap-2.5">
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/15 backdrop-blur text-[11px] font-extrabold ring-1 ring-white/30">
+                CRM
+              </div>
+              <div className="min-w-0">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">
+                  CRM-MG · Anuidade 2026
                 </div>
-                <div className="mt-0.5 font-serif text-3xl font-bold text-foreground">
-                  {fmtBRL(Number(debito.valor))}
+                <div className="truncate text-[11px] text-white/70">
+                  Conselho Regional de Medicina/MG
                 </div>
               </div>
-              <div className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-right">
-                <div className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-amber-800">
-                  <Calendar className="h-3 w-3" /> Vence
+            </div>
+
+            <div className="relative mt-6">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                Valor a pagar
+              </div>
+              <div className="mt-1 font-serif text-[40px] font-bold leading-none tracking-tight">
+                {fmtBRL(Number(debito.valor))}
+              </div>
+            </div>
+
+            <div className="relative mt-5 flex items-center gap-2 rounded-xl bg-white/15 px-3 py-2.5 backdrop-blur ring-1 ring-white/20">
+              <Calendar className="h-4 w-4 text-white/90" />
+              <div className="flex-1 text-[11px] text-white/80">Vencimento</div>
+              <div className="text-sm font-bold text-white">{venc}</div>
+            </div>
+          </div>
+
+          {/* Card flutuante - linha digitável + copy */}
+          <div className="-mt-4 px-3">
+            <div className="rounded-2xl bg-white p-4 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] ring-1 ring-black/5">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  Linha digitável
                 </div>
-                <div className="mt-0.5 text-xs font-bold text-amber-900">{venc}</div>
+                <div className="text-[10px] font-semibold text-crm-green-dark">
+                  {dadosLinha.banco.nome}
+                </div>
+              </div>
+
+              <div className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13.5px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200">
+                {linha}
+              </div>
+
+              <button
+                onClick={handleCopy}
+                className={`mt-3 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-bold shadow-lg transition-all active:scale-[0.98] ${
+                  copiado
+                    ? "bg-emerald-600 text-white shadow-emerald-600/30"
+                    : "bg-crm-green text-primary-foreground shadow-crm-green/40"
+                }`}
+              >
+                {copiado ? (
+                  <>
+                    <Check className="h-5 w-5" /> Copiado!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-5 w-5" /> Copiar código
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Código de barras */}
+            <div className="mt-3 rounded-2xl bg-white p-4 shadow-card ring-1 ring-black/5">
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                  Código de barras
+                </div>
+                <div className="text-[10px] text-neutral-400">ITF · 44 dígitos</div>
+              </div>
+              <div className="mt-3 rounded-xl bg-white p-3 ring-1 ring-neutral-200">
+                <Barcode
+                  value={barcodeValue}
+                  height={80}
+                  className="block h-[80px] w-full"
+                />
+              </div>
+              <p className="mt-2 text-center text-[10.5px] leading-snug text-muted-foreground">
+                Aponte a câmera do app do seu banco para o código acima
+              </p>
+            </div>
+
+            {/* PDF / 2ª via */}
+            {(emissao.pdf_url || emissao.hosted_voucher_url) && (
+              <div className="mt-3 grid gap-2">
+                {emissao.pdf_url && (
+                  <a
+                    href={emissao.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-semibold text-white shadow-md transition active:scale-[0.98]"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Baixar boleto em PDF
+                  </a>
+                )}
+                {emissao.hosted_voucher_url && (
+                  <a
+                    href={emissao.hosted_voucher_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-foreground shadow-sm transition active:scale-[0.98]"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Abrir 2ª via online
+                  </a>
+                )}
+              </div>
+            )}
+
+            {/* Dados detalhados */}
+            <div className="mt-3 rounded-2xl bg-white p-4 shadow-card ring-1 ring-black/5">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
+                <User className="h-3 w-3" /> Pagador
+              </div>
+              <div className="mt-1.5 text-[15px] font-semibold text-foreground">
+                {debito.nome}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/MG
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-neutral-200 pt-3">
+                <div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Nº documento</div>
+                  <div className="mt-0.5 font-mono text-[13px] font-medium text-foreground">{debito.debito_codigo}</div>
+                </div>
+                <div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Emissão</div>
+                  <div className="mt-0.5 text-[13px] font-medium text-foreground">{hoje}</div>
+                </div>
+                <div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Banco</div>
+                  <div className="mt-0.5 text-[13px] font-medium text-foreground">{dadosLinha.banco.nome}</div>
+                </div>
+                <div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Beneficiário</div>
+                  <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-MG</div>
+                </div>
               </div>
             </div>
+
+            <p className="mt-4 px-2 pb-2 text-center text-[11px] leading-relaxed text-muted-foreground">
+              Pagável em qualquer banco, lotérica ou app bancário até o vencimento.
+            </p>
           </div>
-
-          {/* Linha digitável + copy */}
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Linha digitável
-            </div>
-            <div className="mt-2 break-all rounded-lg bg-neutral-50 px-3 py-2.5 font-mono text-[13px] font-semibold leading-snug text-neutral-900">
-              {linha}
-            </div>
-            <button
-              onClick={handleCopy}
-              className={`mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-bold shadow-lg transition ${
-                copiado
-                  ? "bg-emerald-600 text-white shadow-emerald-600/30"
-                  : "bg-crm-green text-primary-foreground shadow-crm-green/30 active:translate-y-0.5"
-              }`}
-            >
-              {copiado ? (
-                <>
-                  <Check className="h-5 w-5" /> Copiado!
-                </>
-              ) : (
-                <>
-                  <Copy className="h-5 w-5" /> Copiar linha digitável
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Código de barras */}
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Código de barras
-            </div>
-            <div className="mt-2 overflow-x-auto rounded-lg bg-white p-2">
-              <Barcode value={barcodeValue} height={70} className="mx-auto block h-[70px] w-full max-w-full" />
-            </div>
-          </div>
-
-          {/* Dados pagador */}
-          <div className="mt-3 rounded-2xl border border-border bg-white p-4 shadow-card">
-            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              <User className="h-3 w-3" /> Pagador
-            </div>
-            <div className="mt-1.5 text-sm font-semibold text-foreground">{debito.nome}</div>
-            <div className="text-xs text-muted-foreground">
-              CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/MG
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Banco</div>
-                <div className="mt-0.5 font-medium text-foreground">{dadosLinha.banco.nome}</div>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Nº documento</div>
-                <div className="mt-0.5 font-mono font-medium text-foreground">{debito.debito_codigo}</div>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Emissão</div>
-                <div className="mt-0.5 font-medium text-foreground">{hoje}</div>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Espécie</div>
-                <div className="mt-0.5 font-medium text-foreground">DM · R$</div>
-              </div>
-            </div>
-          </div>
-
-          {/* PDF / 2ª via */}
-          {(emissao.pdf_url || emissao.hosted_voucher_url) && (
-            <div className="mt-3 grid gap-2">
-              {emissao.pdf_url && (
-                <a
-                  href={emissao.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-foreground shadow-card transition active:translate-y-0.5"
-                >
-                  <FileText className="h-4 w-4" />
-                  Baixar PDF oficial
-                </a>
-              )}
-              {emissao.hosted_voucher_url && (
-                <a
-                  href={emissao.hosted_voucher_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-foreground shadow-card transition active:translate-y-0.5"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir 2ª via online
-                </a>
-              )}
-            </div>
-          )}
-
-          <p className="mt-4 px-2 text-center text-[11px] leading-relaxed text-muted-foreground">
-            Cole no app do seu banco em "Pagar com código de barras". Pagável em
-            qualquer banco, lotérica ou app bancário até o vencimento.
-          </p>
         </div>
+
 
         {/* ========= DESKTOP / PRINT VIEW ========= */}
         <div className="hidden md:block">
