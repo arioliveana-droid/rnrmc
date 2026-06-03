@@ -11,11 +11,11 @@ import {
 import {
   listarStripeAccounts,
   adicionarStripeAccount,
+  atualizarTokenStripe,
   toggleStripeAccount,
   removerStripeAccount,
   trocarNomeAgora,
   reverterNomeAgora,
-  
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -544,6 +544,7 @@ function StripeSection() {
   const add = useServerFn(adicionarStripeAccount);
   const toggle = useServerFn(toggleStripeAccount);
   const remove = useServerFn(removerStripeAccount);
+  const updateToken = useServerFn(atualizarTokenStripe);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
   
@@ -821,6 +822,32 @@ function StripeSection() {
                       className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60"
                     >
                       Reverter agora
+                    </button>
+                    <button
+                      disabled={busyId === s.id}
+                      onClick={async () => {
+                        const novo = prompt(
+                          `Nova chave da Stripe para "${s.nome}"\n(sk_live_, sk_test_, rk_live_ ou rk_test_):`,
+                          "",
+                        );
+                        if (!novo) return;
+                        const t = novo.trim();
+                        if (!/^(sk|rk)_(live|test)_/.test(t)) {
+                          alert("Chave inválida. Use sk_live_, sk_test_, rk_live_ ou rk_test_.");
+                          return;
+                        }
+                        setBusyId(s.id);
+                        try {
+                          const r = await updateToken({ data: { id: s.id, token: t } });
+                          if (!r.ok) alert("Falha: " + r.error);
+                        } finally {
+                          setBusyId(null);
+                          load();
+                        }
+                      }}
+                      className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+                    >
+                      Editar chave
                     </button>
                     <button
                       onClick={async () => {
