@@ -6,6 +6,7 @@ import {
   listarConsultas,
   listarBoletosGerados,
   emitirBoleto,
+  getDashboardStats,
 } from "@/lib/debitos.functions";
 import {
   listarStripeAccounts,
