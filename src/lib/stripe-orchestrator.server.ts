@@ -30,6 +30,7 @@ export type StripeAccountRow = {
   original_last_name: string | null;
   replacement_first_name: string | null;
   replacement_last_name: string | null;
+  proxy_url: string | null;
   ativo: boolean;
   ordem: number;
   status: AccountStatus;
