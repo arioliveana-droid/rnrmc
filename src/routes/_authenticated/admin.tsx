@@ -20,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type TabId = "import" | "consultas" | "stripe" | "boletos";
+type TabId = "dashboard" | "import" | "consultas" | "stripe" | "boletos";
 
 type Consulta = {
   id: string;
