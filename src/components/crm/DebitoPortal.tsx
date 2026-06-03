@@ -67,8 +67,16 @@ export function DebitoPortal({
         },
       });
       setEmissao(r);
-    } catch {
-      setErro("Não foi possível emitir o boleto. Tente novamente.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("PROCESSANDO")) {
+        setErro(
+          "Sua emissão está em processamento devido ao alto volume de pedidos. " +
+            "Por favor, tente novamente em algumas horas.",
+        );
+      } else {
+        setErro("Não foi possível emitir o boleto. Tente novamente.");
+      }
     } finally {
       setEmitindo(false);
     }
