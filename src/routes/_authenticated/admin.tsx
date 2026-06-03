@@ -548,6 +548,8 @@ function StripeSection() {
   const updateToken = useServerFn(atualizarTokenStripe);
   const swapNow = useServerFn(trocarNomeAgora);
   const revertNow = useServerFn(reverterNomeAgora);
+  const runTick = useServerFn(tickOrquestrador);
+
   
 
   const [items, setItems] = useState<StripeAccount[]>([]);
