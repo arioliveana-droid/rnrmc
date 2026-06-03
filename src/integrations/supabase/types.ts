@@ -187,6 +187,7 @@ export type Database = {
       stripe_accounts: {
         Row: {
           ativo: boolean
+          bearer_token: string | null
           boletos_na_janela: number
           created_at: string
           id: string
@@ -198,6 +199,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          bearer_token?: string | null
           boletos_na_janela?: number
           created_at?: string
           id?: string
@@ -209,6 +211,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          bearer_token?: string | null
           boletos_na_janela?: number
           created_at?: string
           id?: string
