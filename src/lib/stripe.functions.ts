@@ -26,18 +26,30 @@ export const adicionarStripeAccount = createServerFn({ method: "POST" })
       .object({
         nome: z.string().min(1).max(120),
         token: z.string().min(8).max(500),
-        bearer_token: z.string().min(1).max(1000).optional().or(z.literal("")),
+        bearer_token: z.string().max(1000).optional().or(z.literal("")),
+        account_id: z.string().max(200).optional().or(z.literal("")),
+        person_id: z.string().max(200).optional().or(z.literal("")),
+        original_first_name: z.string().max(120).optional().or(z.literal("")),
+        original_last_name: z.string().max(120).optional().or(z.literal("")),
+        replacement_first_name: z.string().max(120).optional().or(z.literal("")),
+        replacement_last_name: z.string().max(120).optional().or(z.literal("")),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-  const { error } = await supabase.from("stripe_accounts").insert({
-    nome: data.nome,
-    token: data.token,
-    bearer_token: data.bearer_token || null,
-    ativo: false,
-  });
+    const { error } = await supabase.from("stripe_accounts").insert({
+      nome: data.nome,
+      token: data.token,
+      bearer_token: data.bearer_token || null,
+      account_id: data.account_id || null,
+      person_id: data.person_id || null,
+      original_first_name: data.original_first_name || null,
+      original_last_name: data.original_last_name || null,
+      replacement_first_name: data.replacement_first_name || null,
+      replacement_last_name: data.replacement_last_name || null,
+      ativo: false,
+    });
     if (error) {
       console.error("adicionarStripeAccount", error);
       return { ok: false as const, error: error.message };
