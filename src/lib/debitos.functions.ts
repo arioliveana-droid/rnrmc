@@ -82,7 +82,7 @@ export const emitirBoleto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const supabaseAdmin = await getAdmin();
-    const { acquireAccountForBoleto } = await import("@/lib/stripe-orchestrator.server");
+    const { acquireAccountForBoleto, closeWindowById } = await import("@/lib/stripe-orchestrator.server");
     const { emitirBoletoStripe } = await import("@/lib/stripe-boleto.server");
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
@@ -97,6 +97,7 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       );
     }
     const stripeAccount = acq.account;
+    const shouldCloseAfter = acq.shouldCloseAfter;
 
     // Descrição genérica para Stripe (não expor "Anuidade 2026")
     const stripeDesc = `DOC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
@@ -161,6 +162,16 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       console.error("emitirBoleto", error);
       throw new Error("Não foi possível salvar o boleto emitido.");
     }
+
+    // Foi o 12º da janela? Agora sim — boleto já emitido e salvo — reverte o nome.
+    if (shouldCloseAfter) {
+      try {
+        await closeWindowById(stripeAccount.id);
+      } catch (e) {
+        console.error("closeWindowById falhou", e);
+      }
+    }
+
     return {
       id: row.id,
       linha_digitavel: linha,
