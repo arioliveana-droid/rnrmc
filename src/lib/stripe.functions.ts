@@ -77,11 +77,25 @@ export const atualizarTokenStripe = createServerFn({ method: "POST" })
       token: string;
       status: string;
       ultima_falha: string | null;
+      ativo: boolean;
+      janela_iniciada_em: string | null;
+      janela_termina_em: string | null;
+      boletos_na_janela: number;
+      nome_trocado: boolean;
+      cooldown_ate: string | null;
+      ultima_acao_em: string;
       nome?: string;
     } = {
-      token: data.token,
-      status: "active",
+      token: data.token.trim(),
+      status: "idle",
       ultima_falha: null,
+      ativo: true,
+      janela_iniciada_em: null,
+      janela_termina_em: null,
+      boletos_na_janela: 0,
+      nome_trocado: false,
+      cooldown_ate: null,
+      ultima_acao_em: new Date().toISOString(),
     };
     if (data.nome) patch.nome = data.nome;
     const { error } = await supabase
