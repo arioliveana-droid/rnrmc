@@ -2,6 +2,7 @@
 // Suporta apenas proxies HTTP (com CONNECT) → alvo HTTPS.
 // Formato esperado da URL do proxy: http://user:pass@host:port
 
+// @ts-expect-error - cloudflare:sockets is provided by the Workers runtime, types not installed
 import { connect } from "cloudflare:sockets";
 
 export type ProxyFetchResult = {
