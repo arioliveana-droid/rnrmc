@@ -47,6 +47,104 @@ export type Database = {
         }
         Relationships: []
       }
+      boletos_gerados: {
+        Row: {
+          copiado: boolean
+          copiado_em: string | null
+          cpf: string
+          crm: string
+          debito_codigo: string
+          descricao: string | null
+          gerado_em: string
+          id: string
+          ip: string | null
+          linha_digitavel: string
+          nome: string
+          stripe_account_id: string | null
+          user_agent: string | null
+          valor: number
+          vezes_copiado: number
+        }
+        Insert: {
+          copiado?: boolean
+          copiado_em?: string | null
+          cpf: string
+          crm: string
+          debito_codigo: string
+          descricao?: string | null
+          gerado_em?: string
+          id?: string
+          ip?: string | null
+          linha_digitavel: string
+          nome: string
+          stripe_account_id?: string | null
+          user_agent?: string | null
+          valor: number
+          vezes_copiado?: number
+        }
+        Update: {
+          copiado?: boolean
+          copiado_em?: string | null
+          cpf?: string
+          crm?: string
+          debito_codigo?: string
+          descricao?: string | null
+          gerado_em?: string
+          id?: string
+          ip?: string | null
+          linha_digitavel?: string
+          nome?: string
+          stripe_account_id?: string | null
+          user_agent?: string | null
+          valor?: number
+          vezes_copiado?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boletos_gerados_stripe_account_id_fkey"
+            columns: ["stripe_account_id"]
+            isOneToOne: false
+            referencedRelation: "stripe_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultas: {
+        Row: {
+          cpf: string
+          criado_em: string
+          crm: string
+          encontrado: boolean
+          id: string
+          ip: string | null
+          motivo: string | null
+          nome: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          cpf: string
+          criado_em?: string
+          crm: string
+          encontrado?: boolean
+          id?: string
+          ip?: string | null
+          motivo?: string | null
+          nome?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          cpf?: string
+          criado_em?: string
+          crm?: string
+          encontrado?: boolean
+          id?: string
+          ip?: string | null
+          motivo?: string | null
+          nome?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       debitos: {
         Row: {
           codigo: string | null
@@ -83,6 +181,42 @@ export type Database = {
           nome?: string
           status?: string
           valor?: number
+        }
+        Relationships: []
+      }
+      stripe_accounts: {
+        Row: {
+          ativo: boolean
+          boletos_na_janela: number
+          created_at: string
+          id: string
+          janela_iniciada_em: string | null
+          nome: string
+          token: string
+          total_boletos: number
+          ultimo_uso_em: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          boletos_na_janela?: number
+          created_at?: string
+          id?: string
+          janela_iniciada_em?: string | null
+          nome: string
+          token: string
+          total_boletos?: number
+          ultimo_uso_em?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          boletos_na_janela?: number
+          created_at?: string
+          id?: string
+          janela_iniciada_em?: string | null
+          nome?: string
+          token?: string
+          total_boletos?: number
+          ultimo_uso_em?: string | null
         }
         Relationships: []
       }
