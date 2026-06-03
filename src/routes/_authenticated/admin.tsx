@@ -20,6 +20,7 @@ import {
   reverterNomeAgora,
   tickOrquestrador,
   atualizarStripeAccount,
+  resetarLimitesStripe,
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -85,6 +86,9 @@ type StripeAccount = {
   ativo: boolean;
   ultimo_uso_em: string | null;
   total_boletos: number;
+  trocas_no_dia: number;
+  limite_boletos_diario: number;
+  limite_trocas_diario: number;
   created_at: string;
 };
 
@@ -555,6 +559,7 @@ function StripeSection() {
   const revertNow = useServerFn(reverterNomeAgora);
   const runTick = useServerFn(tickOrquestrador);
   const updateAccount = useServerFn(atualizarStripeAccount);
+  const resetLimites = useServerFn(resetarLimitesStripe);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -562,6 +567,7 @@ function StripeSection() {
     original_first_name: "", original_last_name: "",
     replacement_first_name: "", replacement_last_name: "",
     proxy_url: "", ordem: 0,
+    limite_boletos_diario: 12, limite_trocas_diario: 2,
   });
   const [editSaving, setEditSaving] = useState(false);
   const [editErr, setEditErr] = useState<string | null>(null);
@@ -580,6 +586,8 @@ function StripeSection() {
       replacement_last_name: s.replacement_last_name ?? "",
       proxy_url: s.proxy_url ?? "",
       ordem: s.ordem,
+      limite_boletos_diario: s.limite_boletos_diario ?? 12,
+      limite_trocas_diario: s.limite_trocas_diario ?? 2,
     });
     setEditErr(null);
   };
@@ -859,7 +867,7 @@ function StripeSection() {
                       )}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
-                      Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{12}</strong> · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
+                      Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{s.limite_boletos_diario ?? 12}</strong> (Trocas: {s.trocas_no_dia}/{s.limite_trocas_diario ?? 2}) · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
                     </div>
                     {s.ultima_falha && (
                       <div className="mt-1 text-xs text-red-600">
@@ -883,6 +891,23 @@ function StripeSection() {
                       className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-60"
                     >
                       Trocar nome agora
+                    </button>
+                    <button
+                      disabled={busyId === s.id}
+                      onClick={async () => {
+                        if (!confirm("Resetar contadores diários desta conta? (boletos no dia e trocas no dia serão zerados)")) return;
+                        setBusyId(s.id);
+                        try {
+                          const r = await resetLimites({ data: { id: s.id } });
+                          if (!r.ok) alert("Falha: " + r.error);
+                        } finally {
+                          setBusyId(null);
+                          load();
+                        }
+                      }}
+                      className="rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-xs font-medium text-purple-800 hover:bg-purple-100 disabled:opacity-60"
+                    >
+                      Resetar limites
                     </button>
                     <button
                       disabled={busyId === s.id}
@@ -978,8 +1003,21 @@ function StripeSection() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-muted-foreground mb-1">Proxy URL</label>
-                        <input value={editForm.proxy_url} onChange={(e) => setEditForm((f) => ({ ...f, proxy_url: e.target.value }))} placeholder="http://user:pass@host:port" className={monoCls + " w-full"} />
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Configurações avançadas</div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-foreground mb-1">Proxy URL</label>
+                            <input value={editForm.proxy_url} onChange={(e) => setEditForm((f) => ({ ...f, proxy_url: e.target.value }))} placeholder="http://user:pass@host:port" className={monoCls + " w-full"} />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-foreground mb-1">Limite diário de boletos</label>
+                            <input type="number" min={1} value={editForm.limite_boletos_diario} onChange={(e) => setEditForm((f) => ({ ...f, limite_boletos_diario: parseInt(e.target.value) || 12 }))} className={inputCls + " w-full"} />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-medium text-muted-foreground mb-1">Limite diário de trocas</label>
+                            <input type="number" min={1} value={editForm.limite_trocas_diario} onChange={(e) => setEditForm((f) => ({ ...f, limite_trocas_diario: parseInt(e.target.value) || 2 }))} className={inputCls + " w-full"} />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between gap-3 border-t border-border pt-3">

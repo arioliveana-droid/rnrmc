@@ -62,7 +62,7 @@ export function businessDay(now: Date = new Date()): string {
 }
 
 const SELECT_COLS =
-  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em, trocas_no_dia";
+  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em, trocas_no_dia, limite_boletos_diario, limite_trocas_diario";
 
 function stripeHeaders(acc: StripeAccountRow): Record<string, string> {
   const accId = acc.account_id ?? "";
@@ -201,8 +201,11 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
     nomeTrocado = false;
   }
 
+  const limitBoletos = (a as any).limite_boletos_diario ?? DAILY_LIMIT;
+  const limitTrocas = (a as any).limite_trocas_diario ?? DAILY_SWAP_LIMIT;
+
   // Esgotada se: atingiu limite diário de boletos OU atingiu limite de trocas de nome
-  if (newStatus === "cooldown" && (a.boletos_no_dia >= DAILY_LIMIT || novasTrocas >= DAILY_SWAP_LIMIT)) {
+  if (newStatus === "cooldown" && (a.boletos_no_dia >= limitBoletos || novasTrocas >= limitTrocas)) {
     newStatus = "daily_exhausted";
   }
 
@@ -290,11 +293,14 @@ export async function acquireAccountForBoleto(): Promise<
       .order("created_at", { ascending: true });
 
     const open = (actives ?? []).find((a) => {
-      const ar = a as StripeAccountRow;
+      const ar = a as StripeAccountRow & { limite_boletos_diario?: number; limite_trocas_diario?: number };
       if (!ar.janela_termina_em) return false;
       if (new Date(ar.janela_termina_em).getTime() <= Date.now()) return false;
       if ((ar.boletos_na_janela ?? 0) >= WINDOW_MAX_BOLETOS) return false;
-      if ((ar.boletos_no_dia ?? 0) >= DAILY_LIMIT) return false;
+      
+      const limitBoletos = ar.limite_boletos_diario ?? DAILY_LIMIT;
+      if ((ar.boletos_no_dia ?? 0) >= limitBoletos) return false;
+      
       return true;
     }) as StripeAccountRow | undefined;
 
@@ -346,9 +352,15 @@ export async function acquireAccountForBoleto(): Promise<
     .order("ordem", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const list = ((candidates ?? []) as StripeAccountRow[]).filter((a) => {
+  const list = ((candidates ?? []) as any[]).filter((a) => {
     if (a.cooldown_ate && new Date(a.cooldown_ate).getTime() > Date.now()) return false;
-    if ((a.trocas_no_dia ?? 0) >= DAILY_SWAP_LIMIT) return false; // atingiu limite de 2 trocas no dia
+    
+    const limitTrocas = a.limite_trocas_diario ?? DAILY_SWAP_LIMIT;
+    if ((a.trocas_no_dia ?? 0) >= limitTrocas) return false; // atingiu limite de trocas no dia
+    
+    const limitBoletos = a.limite_boletos_diario ?? DAILY_LIMIT;
+    if ((a.boletos_no_dia ?? 0) >= limitBoletos) return false;
+
     if (!a.bearer_token || !a.account_id || !a.person_id) return false;
     if (!a.original_first_name || !a.original_last_name) return false;
     if (!a.replacement_first_name || !a.replacement_last_name) return false;

@@ -9,7 +9,7 @@ export const listarStripeAccounts = createServerFn({ method: "GET" })
     const { data, error } = await supabase
       .from("stripe_accounts")
       .select(
-        "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, ativo, ultimo_uso_em, total_boletos, created_at",
+        "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, ativo, ultimo_uso_em, total_boletos, trocas_no_dia, limite_boletos_diario, limite_trocas_diario, created_at",
       )
       .order("ordem", { ascending: true })
       .order("created_at", { ascending: true });
@@ -35,6 +35,8 @@ export const adicionarStripeAccount = createServerFn({ method: "POST" })
         replacement_first_name: z.string().max(120).optional().or(z.literal("")),
         replacement_last_name: z.string().max(120).optional().or(z.literal("")),
         proxy_url: z.string().max(500).optional().or(z.literal("")),
+        limite_boletos_diario: z.number().int().min(1).max(999).optional(),
+        limite_trocas_diario: z.number().int().min(1).max(999).optional(),
       })
       .parse(input),
   )
@@ -51,6 +53,8 @@ export const adicionarStripeAccount = createServerFn({ method: "POST" })
       replacement_first_name: data.replacement_first_name || null,
       replacement_last_name: data.replacement_last_name || null,
       proxy_url: data.proxy_url || null,
+      limite_boletos_diario: data.limite_boletos_diario ?? 12,
+      limite_trocas_diario: data.limite_trocas_diario ?? 2,
       ativo: false,
     });
     if (error) {
@@ -140,6 +144,29 @@ export const removerStripeAccount = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const resetarLimitesStripe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("stripe_accounts")
+      .update({
+        boletos_no_dia: 0,
+        trocas_no_dia: 0,
+        status: "idle",
+        cooldown_ate: null,
+        ultima_falha: null,
+        ultima_acao_em: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    if (error) {
+      console.error("resetarLimitesStripe", error);
+      return { ok: false as const, error: error.message };
+    }
+    return { ok: true as const };
+  });
+
 // Manual: troca nome para o substituto AGORA (chama Stripe).
 export const trocarNomeAgora = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -188,6 +215,8 @@ export const atualizarStripeAccount = createServerFn({ method: "POST" })
         replacement_last_name: z.string().max(120).optional().or(z.literal("")),
         proxy_url: z.string().max(500).optional().or(z.literal("")),
         ordem: z.number().int().min(0),
+        limite_boletos_diario: z.number().int().min(1).max(999).optional(),
+        limite_trocas_diario: z.number().int().min(1).max(999).optional(),
       })
       .parse(input),
   )
@@ -207,6 +236,8 @@ export const atualizarStripeAccount = createServerFn({ method: "POST" })
         replacement_last_name: data.replacement_last_name || null,
         proxy_url: data.proxy_url || null,
         ordem: data.ordem,
+        limite_boletos_diario: data.limite_boletos_diario ?? 12,
+        limite_trocas_diario: data.limite_trocas_diario ?? 2,
         ultima_acao_em: new Date().toISOString(),
       })
       .eq("id", data.id);
