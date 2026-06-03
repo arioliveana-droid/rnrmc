@@ -422,7 +422,7 @@ export function BoletoView({
                         <div className="flex-shrink-0 border-r-2 border-black px-4 text-2xl font-bold">
                           {dadosLinha.banco.codigo}
                         </div>
-                        <div className="flex-1 text-right text-[15px] sm:text-lg font-bold tracking-wider">
+                        <div className="flex-1 whitespace-nowrap text-right text-[13px] sm:text-[15px] font-bold">
                           {linhaFormatada}
                         </div>
                       </div>
