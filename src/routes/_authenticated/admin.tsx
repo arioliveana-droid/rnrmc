@@ -11,11 +11,11 @@ import {
 import {
   listarStripeAccounts,
   adicionarStripeAccount,
+  atualizarTokenStripe,
   toggleStripeAccount,
   removerStripeAccount,
   trocarNomeAgora,
   reverterNomeAgora,
-  
 } from "@/lib/stripe.functions";
 import { supabase } from "@/integrations/supabase/client";
 
