@@ -3,6 +3,7 @@
 // limites de janela (20 min / 12 boletos) + cooldown 2h + corte diário 07:00 BRT.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
 
 export const WINDOW_MINUTES = 20;
 export const WINDOW_MAX_BOLETOS = 12;
