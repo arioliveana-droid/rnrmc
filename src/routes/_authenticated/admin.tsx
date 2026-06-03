@@ -55,6 +55,7 @@ type StripeAccount = {
   id: string;
   nome: string;
   token: string;
+  bearer_token: string | null;
   ativo: boolean;
   boletos_na_janela: number;
   janela_iniciada_em: string | null;
@@ -302,6 +303,7 @@ function StripeSection() {
   const [items, setItems] = useState<StripeAccount[]>([]);
   const [nome, setNome] = useState("");
   const [token, setToken] = useState("");
+  const [bearerToken, setBearerToken] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -318,12 +320,13 @@ function StripeSection() {
     setErr(null);
     setSaving(true);
     try {
-      const r = await add({ data: { nome: nome.trim(), token: token.trim() } });
+      const r = await add({ data: { nome: nome.trim(), token: token.trim(), bearer_token: bearerToken.trim() } });
       if (!r.ok) {
         setErr(r.error ?? "Erro ao salvar.");
       } else {
         setNome("");
         setToken("");
+        setBearerToken("");
         await load();
       }
     } finally {
@@ -348,7 +351,7 @@ function StripeSection() {
         <p className="mt-1 text-xs text-muted-foreground">
           A conta entra desativada — você ativa depois que concluir o processo na Stripe.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_auto]">
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_2fr_auto]">
           <input
             value={nome}
             onChange={(e) => setNome(e.target.value)}
@@ -359,6 +362,12 @@ function StripeSection() {
             value={token}
             onChange={(e) => setToken(e.target.value)}
             placeholder="sk_live_... ou sk_test_..."
+            className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green"
+          />
+          <input
+            value={bearerToken}
+            onChange={(e) => setBearerToken(e.target.value)}
+            placeholder="Token Bearer (opcional)"
             className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green"
           />
           <button
@@ -382,6 +391,9 @@ function StripeSection() {
             {items.map((s) => {
               const tokenMasked =
                 s.token.slice(0, 8) + "…" + s.token.slice(-4);
+              const bearerMasked = s.bearer_token
+                ? s.bearer_token.slice(0, 6) + "…" + s.bearer_token.slice(-4)
+                : null;
               return (
                 <li key={s.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -399,7 +411,12 @@ function StripeSection() {
                       </span>
                     </div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">
-                      {tokenMasked}
+                      API: {tokenMasked}
+                      {bearerMasked && (
+                        <span className="ml-2 text-xs text-crm-green-dark">
+                          Bearer: {bearerMasked}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Total emitido: <strong>{s.total_boletos}</strong> · Janela atual:{" "}
