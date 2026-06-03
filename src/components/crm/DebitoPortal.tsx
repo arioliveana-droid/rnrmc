@@ -179,11 +179,23 @@ export function DebitoPortal({
 
                 <div className="mt-6">
                   <button
-                    onClick={() => setVerBoleto(true)}
-                    className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-crm-green px-8 text-base font-bold text-primary-foreground shadow-lg shadow-crm-green/30 transition hover:translate-y-[-2px] hover:bg-crm-green-dark hover:shadow-xl hover:shadow-crm-green/40 active:translate-y-0 sm:w-auto"
+                    onClick={handleEmitir}
+                    disabled={emitindo}
+                    className="inline-flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-crm-green px-8 text-base font-bold text-primary-foreground shadow-lg shadow-crm-green/30 transition hover:translate-y-[-2px] hover:bg-crm-green-dark hover:shadow-xl hover:shadow-crm-green/40 active:translate-y-0 disabled:opacity-70 sm:w-auto"
                   >
-                    <FileText className="h-6 w-6" /> Emitir boleto
+                    {emitindo ? (
+                      <>
+                        <Loader2 className="h-6 w-6 animate-spin" /> Emitindo…
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-6 w-6" /> Emitir boleto
+                      </>
+                    )}
                   </button>
+                  {erro && (
+                    <p className="mt-2 text-xs text-red-600">{erro}</p>
+                  )}
                 </div>
               </div>
             </article>
