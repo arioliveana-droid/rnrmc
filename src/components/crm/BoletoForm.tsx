@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupDebito } from "@/lib/debitos.functions";
 import { DebitoPortal } from "./DebitoPortal";
