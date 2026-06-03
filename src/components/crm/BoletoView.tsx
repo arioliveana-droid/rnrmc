@@ -420,13 +420,13 @@ export function BoletoView({
                   <tr>
                     <td colSpan={7} className="border-b-2 border-black p-2">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 border-r-2 border-black pr-4">
-                          <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
+                        <div className="flex-shrink-0 border-r-2 border-black pr-2">
+                          <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "30px", width: "90px", objectFit: "contain", display: "block" }} />
                         </div>
-                        <div className="flex-shrink-0 border-r-2 border-black px-3 text-xl font-bold">
+                        <div className="flex-shrink-0 border-r-2 border-black px-2 text-lg font-bold">
                           {dadosLinha.banco.codigo}
                         </div>
-                        <div className="flex-1 whitespace-nowrap text-right text-[12px] sm:text-[13px] md:text-[14px] font-bold">
+                        <div className="flex-1 whitespace-nowrap text-right text-[11px] sm:text-[12px] md:text-[13px] tracking-tight font-bold">
                           {linhaFormatada}
                         </div>
                       </div>

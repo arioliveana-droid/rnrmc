@@ -22,7 +22,7 @@ export function Barcode({
       JsBarcode(ref.current, digits, {
         format: "ITF",
         height,
-        width: 1.5,
+        width: 2,
         displayValue: false,
         margin: 0,
         background: "#ffffff",
