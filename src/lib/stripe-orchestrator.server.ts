@@ -59,7 +59,7 @@ export function businessDay(now: Date = new Date()): string {
 }
 
 const SELECT_COLS =
-  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em";
+  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em";
 
 function stripeHeaders(acc: StripeAccountRow): Record<string, string> {
   const accId = acc.account_id ?? "";
