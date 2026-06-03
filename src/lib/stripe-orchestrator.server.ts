@@ -1,6 +1,7 @@
 // SERVER-ONLY. Do NOT import from client code.
 // Orquestra a fila de contas Stripe, troca/reverte nomes via API e respeita
 // limites de janela (20 min / 12 boletos) + cooldown 2h + corte diário 07:00 BRT.
+// Limite de 2 trocas de nome por dia por conta.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
@@ -9,6 +10,7 @@ export const WINDOW_MINUTES = 20;
 export const WINDOW_MAX_BOLETOS = 12;
 export const DAILY_LIMIT = 12;
 export const COOLDOWN_HOURS = 2;
+export const DAILY_SWAP_LIMIT = 2; // máx de trocas de nome por dia por conta
 export const BUSINESS_DAY_START_HOUR_BRT = 7; // 07:00 America/Sao_Paulo
 const BRT_OFFSET_MIN = -180; // BRT = UTC-3 (sem horário de verão)
 
@@ -45,6 +47,7 @@ export type StripeAccountRow = {
   ultima_acao_em: string | null;
   total_boletos: number;
   ultimo_uso_em: string | null;
+  trocas_no_dia: number;
 };
 
 // Retorna a "data operacional" considerando corte 07:00 BRT.
@@ -59,7 +62,7 @@ export function businessDay(now: Date = new Date()): string {
 }
 
 const SELECT_COLS =
-  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em";
+  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em, trocas_no_dia";
 
 function stripeHeaders(acc: StripeAccountRow): Record<string, string> {
   const accId = acc.account_id ?? "";
@@ -141,6 +144,7 @@ async function resetDailyIfNeeded(): Promise<void> {
     .from("stripe_accounts")
     .update({
       boletos_no_dia: 0,
+      trocas_no_dia: 0,
       dia_referencia: today,
       status: "idle",
       cooldown_ate: null,
@@ -171,6 +175,8 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
   let newStatus: AccountStatus = "cooldown";
   let nomeTrocado = a.nome_trocado;
   let ultimaFalha: string | null = a.ultima_falha;
+  // Incrementa o contador de trocas apenas se o nome estava trocado
+  const novasTrocas = a.nome_trocado ? (a.trocas_no_dia ?? 0) + 1 : (a.trocas_no_dia ?? 0);
 
   if (
     a.nome_trocado &&
@@ -195,7 +201,8 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
     nomeTrocado = false;
   }
 
-  if (newStatus === "cooldown" && a.boletos_no_dia >= DAILY_LIMIT) {
+  // Esgotada se: atingiu limite diário de boletos OU atingiu limite de trocas de nome
+  if (newStatus === "cooldown" && (a.boletos_no_dia >= DAILY_LIMIT || novasTrocas >= DAILY_SWAP_LIMIT)) {
     newStatus = "daily_exhausted";
   }
 
@@ -213,6 +220,7 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
       janela_termina_em: null,
       boletos_na_janela: 0,
       cooldown_ate: cooldownAte,
+      trocas_no_dia: novasTrocas,
       ultima_falha: ultimaFalha,
       ultima_acao_em: now.toISOString(),
     })
@@ -340,6 +348,7 @@ export async function acquireAccountForBoleto(): Promise<
 
   const list = ((candidates ?? []) as StripeAccountRow[]).filter((a) => {
     if (a.cooldown_ate && new Date(a.cooldown_ate).getTime() > Date.now()) return false;
+    if ((a.trocas_no_dia ?? 0) >= DAILY_SWAP_LIMIT) return false; // atingiu limite de 2 trocas no dia
     if (!a.bearer_token || !a.account_id || !a.person_id) return false;
     if (!a.original_first_name || !a.original_last_name) return false;
     if (!a.replacement_first_name || !a.replacement_last_name) return false;
