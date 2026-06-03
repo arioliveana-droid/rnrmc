@@ -119,6 +119,17 @@ export function BoletoView({
 
   return (
     <div className="min-h-screen bg-[oklch(0.97_0.005_158)] print:bg-white">
+      <style>{`
+        @media print {
+          @page { margin: 0; }
+          body { 
+            margin: 1cm; 
+            background: white !important; 
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact; 
+          }
+        }
+      `}</style>
       {/* Top bar */}
       <header className="sticky top-0 z-20 border-b border-border bg-card/85 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-3 py-2.5 sm:px-4 sm:py-3">
@@ -238,25 +249,14 @@ export function BoletoView({
             </div>
 
             {/* PDF customizado */}
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3">
               <button
                 onClick={() => window.print()}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-semibold text-white shadow-md transition active:scale-[0.98]"
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-neutral-900 px-4 text-sm font-semibold text-white shadow-md transition active:scale-[0.98]"
               >
                 <FileText className="h-4 w-4" />
                 Salvar boleto em PDF
               </button>
-              {emissao.hosted_voucher_url && (
-                <a
-                  href={emissao.hosted_voucher_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-foreground shadow-sm transition active:scale-[0.98]"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir 2ª via online
-                </a>
-              )}
             </div>
 
             {/* Dados detalhados */}
@@ -300,7 +300,7 @@ export function BoletoView({
 
 
         {/* ========= DESKTOP / PRINT VIEW ========= */}
-        <div className="hidden md:block">
+        <div className="hidden md:block print:block">
           <div className="mb-4 rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
             <div className="flex items-start gap-3">
               <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-md bg-crm-green text-primary-foreground font-bold text-sm">
@@ -438,25 +438,14 @@ export function BoletoView({
               )}
             </button>
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-3">
               <button
                 onClick={() => window.print()}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
               >
                 <FileText className="h-4 w-4" />
                 Salvar como PDF
               </button>
-              {emissao.hosted_voucher_url && (
-                <a
-                  href={emissao.hosted_voucher_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-secondary"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir 2ª via online
-                </a>
-              )}
             </div>
 
             <p className="mt-3 text-center text-xs text-muted-foreground">
