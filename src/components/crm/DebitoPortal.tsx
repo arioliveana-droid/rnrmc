@@ -47,10 +47,41 @@ export function DebitoPortal({
   debito: Debito;
   onLogout: () => void;
 }) {
-  const [verBoleto, setVerBoleto] = useState(false);
+  const emitir = useServerFn(emitirBoleto);
+  const [emissao, setEmissao] = useState<EmissaoBoleto | null>(null);
+  const [emitindo, setEmitindo] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
-  if (verBoleto) {
-    return <BoletoView debito={debito} onBack={() => setVerBoleto(false)} />;
+  const handleEmitir = async () => {
+    setErro(null);
+    setEmitindo(true);
+    try {
+      const r = await emitir({
+        data: {
+          nome: debito.nome,
+          cpf: debito.cpf,
+          crm: debito.crm,
+          debito_codigo: debito.debito_codigo,
+          descricao: debito.descricao,
+          valor: Number(debito.valor),
+        },
+      });
+      setEmissao(r);
+    } catch {
+      setErro("Não foi possível emitir o boleto. Tente novamente.");
+    } finally {
+      setEmitindo(false);
+    }
+  };
+
+  if (emissao) {
+    return (
+      <BoletoView
+        debito={debito}
+        emissao={emissao}
+        onBack={() => setEmissao(null)}
+      />
+    );
   }
 
 
