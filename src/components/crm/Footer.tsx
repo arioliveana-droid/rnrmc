@@ -6,7 +6,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6">
         <div className="flex flex-col items-start justify-between gap-12 md:flex-row">
           <div className="max-w-sm">
-            <img src="https://crmmg.org.br/wp-content/themes/crmmg/images/logo-crmmg.png" alt="CRM-MG" className="h-10 w-auto" width={120} height={40} />
+            <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-10 w-auto" width={120} height={40} />
           </div>
           <div className="grid grid-cols-2 gap-12 sm:grid-cols-3">
             <div>
