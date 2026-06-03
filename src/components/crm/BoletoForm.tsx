@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { lookupDebito } from "@/lib/debitos.functions";
 import { DebitoPortal } from "./DebitoPortal";
@@ -101,26 +101,6 @@ export function BoletoForm() {
             Informe seu CRM e CPF para gerar o boleto ou o Pix da anuidade 2026 do CRM-MG.
           </p>
 
-          <ul className="mt-8 space-y-4 text-sm">
-            <li className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
-              <span className="text-foreground/85">
-                Consulta segura à base oficial do Conselho Regional de Medicina.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <FileText className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
-              <span className="text-foreground/85">
-                Boleto e Pix copia-e-cola com desconto de 5%.
-              </span>
-            </li>
-            <li className="flex items-start gap-3">
-              <Lock className="mt-0.5 h-5 w-5 flex-none text-crm-green" />
-              <span className="text-foreground/85">
-                Seus dados são utilizados somente para localizar seu registro.
-              </span>
-            </li>
-          </ul>
         </div>
 
         <form
