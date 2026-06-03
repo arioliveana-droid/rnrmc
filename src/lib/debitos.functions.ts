@@ -215,8 +215,8 @@ export const lookupDebito = createServerFn({ method: "POST" })
     const supabaseAdmin = await getAdmin();
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
-    const ip = getClientIp();
-    const ua = getUserAgent();
+    const ip = await getClientIp();
+    const ua = await getUserAgent();
 
     const { data: rows, error } = await supabaseAdmin
       .from("debitos")
