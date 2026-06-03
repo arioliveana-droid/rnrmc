@@ -92,6 +92,7 @@ export async function proxyFetch(
       ? 443
       : 80;
 
+  const connect = await getConnect();
   const socket = connect(
     { hostname: proxy.host, port: proxy.port },
     { secureTransport: "off", allowHalfOpen: false },
