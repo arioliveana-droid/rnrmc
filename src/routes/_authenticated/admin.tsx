@@ -66,6 +66,7 @@ type StripeAccount = {
   original_last_name: string | null;
   replacement_first_name: string | null;
   replacement_last_name: string | null;
+  proxy_url: string | null;
   ordem: number;
   status: "idle" | "active" | "cooldown" | "daily_exhausted" | "failed";
   janela_iniciada_em: string | null;
