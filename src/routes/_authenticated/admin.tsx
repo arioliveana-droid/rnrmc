@@ -794,19 +794,6 @@ function StripeSection() {
                     <div className="mt-1 text-xs text-muted-foreground">
                       Janela: <strong>{s.boletos_na_janela}/{12}</strong> · Hoje: <strong>{s.boletos_no_dia}/{12}</strong> · Total: <strong>{s.total_boletos}</strong> · Último uso: {fmtDate(s.ultimo_uso_em)}
                     </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        defaultValue={s.proxy_url ?? ""}
-                        onBlur={async (e) => {
-                          const v = e.target.value.trim();
-                          if (v === (s.proxy_url ?? "")) return;
-                          await updateProxy({ data: { id: s.id, proxy_url: v } });
-                          load();
-                        }}
-                        placeholder="Proxy: http://user:pass@host:porta (opcional)"
-                        className="h-8 w-full max-w-md rounded-md border border-border bg-background px-2 font-mono text-[11px] outline-none focus:border-crm-green"
-                      />
-                    </div>
                     {s.ultima_falha && (
                       <div className="mt-1 text-xs text-red-600">
                         Última falha: {s.ultima_falha}
