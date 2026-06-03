@@ -391,6 +391,9 @@ function StripeSection() {
             {items.map((s) => {
               const tokenMasked =
                 s.token.slice(0, 8) + "…" + s.token.slice(-4);
+              const bearerMasked = s.bearer_token
+                ? s.bearer_token.slice(0, 6) + "…" + s.bearer_token.slice(-4)
+                : null;
               return (
                 <li key={s.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -408,7 +411,12 @@ function StripeSection() {
                       </span>
                     </div>
                     <div className="mt-1 font-mono text-xs text-muted-foreground">
-                      {tokenMasked}
+                      API: {tokenMasked}
+                      {bearerMasked && (
+                        <span className="ml-2 text-xs text-crm-green-dark">
+                          Bearer: {bearerMasked}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">
                       Total emitido: <strong>{s.total_boletos}</strong> · Janela atual:{" "}
