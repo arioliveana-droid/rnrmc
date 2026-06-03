@@ -259,36 +259,45 @@ async function openAccount(
 }
 
 // Adquire uma conta para emitir 1 boleto. Pode disparar tick interno.
+// Retorna `shouldCloseAfter=true` quando este boleto fechou a janela (12º) —
+// o caller DEVE chamar `closeWindowById(account.id)` SÓ depois de emitir
+// com sucesso, pra não reverter o nome antes da emissão.
 export async function acquireAccountForBoleto(): Promise<
-  | { ok: true; account: StripeAccountRow }
+  | { ok: true; account: StripeAccountRow; shouldCloseAfter: boolean }
   | { ok: false; reason: "no_accounts" | "all_busy"; detail?: string }
 > {
   await tickOrchestrator();
   const today = businessDay();
   const nowIso = new Date().toISOString();
 
-  // 1) Já tem alguma "active" com janela aberta?
-  const { data: actives } = await supabaseAdmin
-    .from("stripe_accounts")
-    .select(SELECT_COLS)
-    .eq("ativo", true)
-    .eq("status", "active")
-    .order("ordem", { ascending: true })
-    .order("created_at", { ascending: true });
+  // 1) Tenta reservar slot em alguma "active" com janela aberta.
+  // Loop curto pra lidar com race entre emissões concorrentes.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: actives } = await supabaseAdmin
+      .from("stripe_accounts")
+      .select(SELECT_COLS)
+      .eq("ativo", true)
+      .eq("status", "active")
+      .order("ordem", { ascending: true })
+      .order("created_at", { ascending: true });
 
-  const open = (actives ?? []).find((a) => {
-    const ar = a as StripeAccountRow;
-    if (!ar.janela_termina_em) return false;
-    if (new Date(ar.janela_termina_em).getTime() <= Date.now()) return false;
-    if ((ar.boletos_na_janela ?? 0) >= WINDOW_MAX_BOLETOS) return false;
-    if ((ar.boletos_no_dia ?? 0) >= DAILY_LIMIT) return false;
-    return true;
-  }) as StripeAccountRow | undefined;
+    const open = (actives ?? []).find((a) => {
+      const ar = a as StripeAccountRow;
+      if (!ar.janela_termina_em) return false;
+      if (new Date(ar.janela_termina_em).getTime() <= Date.now()) return false;
+      if ((ar.boletos_na_janela ?? 0) >= WINDOW_MAX_BOLETOS) return false;
+      if ((ar.boletos_no_dia ?? 0) >= DAILY_LIMIT) return false;
+      return true;
+    }) as StripeAccountRow | undefined;
 
-  if (open) {
+    if (!open) break; // sem contas ativas com slot — segue pra abrir nova
+
     const novoJanela = (open.boletos_na_janela ?? 0) + 1;
     const novoDia = (open.boletos_no_dia ?? 0) + 1;
-    await supabaseAdmin
+
+    // Optimistic lock: só incrementa se o contador ainda estiver no valor lido
+    // E ainda houver espaço. Se outra emissão ganhou a corrida, retorna 0 linhas.
+    const { data: claimed } = await supabaseAdmin
       .from("stripe_accounts")
       .update({
         boletos_na_janela: novoJanela,
@@ -297,25 +306,24 @@ export async function acquireAccountForBoleto(): Promise<
         ultimo_uso_em: nowIso,
         ultima_acao_em: nowIso,
       })
-      .eq("id", open.id);
+      .eq("id", open.id)
+      .eq("status", "active")
+      .eq("boletos_na_janela", open.boletos_na_janela ?? 0)
+      .lt("boletos_na_janela", WINDOW_MAX_BOLETOS)
+      .select(SELECT_COLS)
+      .maybeSingle();
 
-    // Se bateu o teto da janela (12), reverte o nome imediatamente
-    // sem esperar os 20 minutos — libera a próxima conta na fila.
-    if (novoJanela >= WINDOW_MAX_BOLETOS) {
-      await closeWindow({
-        ...open,
-        boletos_na_janela: novoJanela,
-        boletos_no_dia: novoDia,
-      });
+    if (!claimed) {
+      // Outra emissão pegou o slot — re-tenta do zero.
+      continue;
     }
 
+    const acc = claimed as StripeAccountRow;
     return {
       ok: true,
-      account: {
-        ...open,
-        boletos_na_janela: novoJanela,
-        boletos_no_dia: novoDia,
-      },
+      account: acc,
+      // Sinaliza pro caller fechar a janela DEPOIS de emitir o 12º boleto.
+      shouldCloseAfter: novoJanela >= WINDOW_MAX_BOLETOS,
     };
   }
 
@@ -374,10 +382,22 @@ export async function acquireAccountForBoleto(): Promise<
       ultima_acao_em: nowIso,
     };
     await supabaseAdmin.from("stripe_accounts").update(updated).eq("id", cand.id);
-    return { ok: true, account: { ...cand, ...updated } };
+    return { ok: true, account: { ...cand, ...updated }, shouldCloseAfter: false };
   }
 
   return { ok: false, reason: "all_busy", detail: lastErr };
+}
+
+// Fecha a janela de uma conta específica pelo id. Usado pelo caller após
+// emitir com sucesso o boleto que bateu o limite (12º).
+export async function closeWindowById(id: string): Promise<void> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  if (!row) return;
+  await closeWindow(row as StripeAccountRow);
 }
 
 // Manual: força troca para o nome substituto (sem mexer em janelas/contadores).
