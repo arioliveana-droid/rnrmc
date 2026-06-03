@@ -3,9 +3,12 @@ import {
   ArrowLeft,
   Bell,
   FileText,
+  Loader2,
   Wallet,
 } from "lucide-react";
-import { BoletoView } from "./BoletoView";
+import { useServerFn } from "@tanstack/react-start";
+import { BoletoView, type EmissaoBoleto } from "./BoletoView";
+import { emitirBoleto } from "@/lib/debitos.functions";
 
 type Debito = {
   nome: string;
