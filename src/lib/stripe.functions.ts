@@ -6,12 +6,12 @@ export const listarStripeAccounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase } = context;
-    const { data, error } = await supabase
-      .from("stripe_accounts")
-      .select(
-        "id, nome, token, ativo, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos, created_at",
-      )
-      .order("created_at", { ascending: false });
+  const { data, error } = await supabase
+    .from("stripe_accounts")
+    .select(
+      "id, nome, token, bearer_token, ativo, boletos_na_janela, janela_iniciada_em, ultimo_uso_em, total_boletos, created_at",
+    )
+    .order("created_at", { ascending: false });
     if (error) {
       console.error("listarStripeAccounts", error);
       return { accounts: [] };
@@ -26,16 +26,18 @@ export const adicionarStripeAccount = createServerFn({ method: "POST" })
       .object({
         nome: z.string().min(1).max(120),
         token: z.string().min(8).max(500),
+        bearer_token: z.string().min(1).max(1000).optional().or(z.literal("")),
       })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { error } = await supabase.from("stripe_accounts").insert({
-      nome: data.nome,
-      token: data.token,
-      ativo: false,
-    });
+  const { error } = await supabase.from("stripe_accounts").insert({
+    nome: data.nome,
+    token: data.token,
+    bearer_token: data.bearer_token || null,
+    ativo: false,
+  });
     if (error) {
       console.error("adicionarStripeAccount", error);
       return { ok: false as const, error: error.message };
