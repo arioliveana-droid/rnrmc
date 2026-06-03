@@ -134,7 +134,9 @@ export const emitirBoleto = createServerFn({ method: "POST" })
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
     const linha = gerarLinhaDigitavel(cpf + crm, data.valor);
-    const stripeId = await pickStripeAccount(getAdmin());
+    const stripeId = await pickStripeAccount();
+    const ip = await getClientIp();
+    const ua = await getUserAgent();
 
     const venc = new Date();
     venc.setDate(venc.getDate() + 1);
@@ -150,8 +152,8 @@ export const emitirBoleto = createServerFn({ method: "POST" })
         valor: data.valor,
         linha_digitavel: linha,
         stripe_account_id: stripeId,
-        ip: getClientIp(),
-        user_agent: getUserAgent(),
+        ip,
+        user_agent: ua,
       })
       .select("id")
       .single();
