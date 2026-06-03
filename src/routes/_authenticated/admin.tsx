@@ -57,6 +57,12 @@ type StripeAccount = {
   nome: string;
   token: string;
   bearer_token: string | null;
+  account_id: string | null;
+  person_id: string | null;
+  original_first_name: string | null;
+  original_last_name: string | null;
+  replacement_first_name: string | null;
+  replacement_last_name: string | null;
   ativo: boolean;
   boletos_na_janela: number;
   janela_iniciada_em: string | null;
@@ -530,6 +536,12 @@ function StripeSection() {
   const [nome, setNome] = useState("");
   const [token, setToken] = useState("");
   const [bearerToken, setBearerToken] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [personId, setPersonId] = useState("");
+  const [origFirst, setOrigFirst] = useState("");
+  const [origLast, setOrigLast] = useState("");
+  const [replFirst, setReplFirst] = useState("");
+  const [replLast, setReplLast] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -546,19 +558,42 @@ function StripeSection() {
     setErr(null);
     setSaving(true);
     try {
-      const r = await add({ data: { nome: nome.trim(), token: token.trim(), bearer_token: bearerToken.trim() } });
+      const r = await add({
+        data: {
+          nome: nome.trim(),
+          token: token.trim(),
+          bearer_token: bearerToken.trim(),
+          account_id: accountId.trim(),
+          person_id: personId.trim(),
+          original_first_name: origFirst.trim(),
+          original_last_name: origLast.trim(),
+          replacement_first_name: replFirst.trim(),
+          replacement_last_name: replLast.trim(),
+        },
+      });
       if (!r.ok) {
         setErr(r.error ?? "Erro ao salvar.");
       } else {
         setNome("");
         setToken("");
         setBearerToken("");
+        setAccountId("");
+        setPersonId("");
+        setOrigFirst("");
+        setOrigLast("");
+        setReplFirst("");
+        setReplLast("");
         await load();
       }
     } finally {
       setSaving(false);
     }
   };
+
+  const inputCls =
+    "h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green";
+  const monoCls =
+    "h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green";
 
   return (
     <section>
@@ -577,32 +612,50 @@ function StripeSection() {
         <p className="mt-1 text-xs text-muted-foreground">
           A conta entra desativada — você ativa depois que concluir o processo na Stripe.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_2fr_2fr_auto]">
-          <input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Nome/identificador"
-            className="h-10 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green"
-          />
-          <input
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="sk_live_... ou sk_test_..."
-            className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green"
-          />
-          <input
-            value={bearerToken}
-            onChange={(e) => setBearerToken(e.target.value)}
-            placeholder="Token Bearer (opcional)"
-            className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-xs outline-none focus:border-crm-green"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={saving || !nome.trim() || !token.trim()}
-            className="h-10 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark disabled:opacity-60"
-          >
-            {saving ? "Salvando…" : "Adicionar"}
-          </button>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Identificação</div>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome/identificador" className={inputCls} />
+              <input value={token} onChange={(e) => setToken(e.target.value)} placeholder="sk_live_... ou sk_test_..." className={monoCls} />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sessão capturada (opcional)</div>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <input value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} placeholder="Bearer (uk_...)" className={monoCls} />
+              <input value={accountId} onChange={(e) => setAccountId(e.target.value)} placeholder="Account ID (acct_...)" className={monoCls} />
+              <input value={personId} onChange={(e) => setPersonId(e.target.value)} placeholder="Person ID (person_...)" className={monoCls} />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome original (na Stripe hoje)</div>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <input value={origFirst} onChange={(e) => setOrigFirst(e.target.value)} placeholder="First name original" className={inputCls} />
+              <input value={origLast} onChange={(e) => setOrigLast(e.target.value)} placeholder="Last name original" className={inputCls} />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome para substituição</div>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <input value={replFirst} onChange={(e) => setReplFirst(e.target.value)} placeholder="First name novo" className={inputCls} />
+              <input value={replLast} onChange={(e) => setReplLast(e.target.value)} placeholder="Last name novo" className={inputCls} />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={handleAdd}
+              disabled={saving || !nome.trim() || !token.trim()}
+              className="h-10 rounded-lg bg-crm-green px-5 text-sm font-semibold text-primary-foreground hover:bg-crm-green-dark disabled:opacity-60"
+            >
+              {saving ? "Salvando…" : "Adicionar conta"}
+            </button>
+          </div>
         </div>
         {err && <p className="mt-2 text-xs text-red-600">{err}</p>}
       </div>
