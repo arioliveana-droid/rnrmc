@@ -66,6 +66,7 @@ type StripeAccount = {
 };
 
 const tabs: Array<{ id: TabId; label: string }> = [
+  { id: "dashboard", label: "Dashboard" },
   { id: "import", label: "Importar débitos" },
   { id: "consultas", label: "Consultas" },
   { id: "stripe", label: "Contas Stripe" },
@@ -79,7 +80,7 @@ const fmtBRL = (v: number) =>
 
 function AdminPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabId>("import");
+  const [tab, setTab] = useState<TabId>("dashboard");
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
