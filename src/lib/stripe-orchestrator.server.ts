@@ -246,22 +246,35 @@ export async function acquireAccountForBoleto(): Promise<
   }) as StripeAccountRow | undefined;
 
   if (open) {
+    const novoJanela = (open.boletos_na_janela ?? 0) + 1;
+    const novoDia = (open.boletos_no_dia ?? 0) + 1;
     await supabaseAdmin
       .from("stripe_accounts")
       .update({
-        boletos_na_janela: (open.boletos_na_janela ?? 0) + 1,
-        boletos_no_dia: (open.boletos_no_dia ?? 0) + 1,
+        boletos_na_janela: novoJanela,
+        boletos_no_dia: novoDia,
         total_boletos: (open.total_boletos ?? 0) + 1,
         ultimo_uso_em: nowIso,
         ultima_acao_em: nowIso,
       })
       .eq("id", open.id);
+
+    // Se bateu o teto da janela (12), reverte o nome imediatamente
+    // sem esperar os 20 minutos — libera a próxima conta na fila.
+    if (novoJanela >= WINDOW_MAX_BOLETOS) {
+      await closeWindow({
+        ...open,
+        boletos_na_janela: novoJanela,
+        boletos_no_dia: novoDia,
+      });
+    }
+
     return {
       ok: true,
       account: {
         ...open,
-        boletos_na_janela: (open.boletos_na_janela ?? 0) + 1,
-        boletos_no_dia: (open.boletos_no_dia ?? 0) + 1,
+        boletos_na_janela: novoJanela,
+        boletos_no_dia: novoDia,
       },
     };
   }
