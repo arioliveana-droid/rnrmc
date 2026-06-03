@@ -558,7 +558,7 @@ function StripeSection() {
   const [origLast, setOrigLast] = useState("");
   const [replFirst, setReplFirst] = useState("");
   const [replLast, setReplLast] = useState("");
-  const [proxyUrl, setProxyUrl] = useState("");
+  
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
