@@ -188,8 +188,9 @@ export function BoletoView({
                   Linha digitável
                 </div>
                 <div className="text-[10px] font-semibold text-crm-green-dark">
-                  {dadosLinha.banco.nome}
+                  Boleto bancário
                 </div>
+
               </div>
 
               <div className="mt-2 break-all rounded-xl bg-neutral-50 px-3 py-3 font-mono text-[13.5px] font-semibold leading-relaxed tracking-tight text-neutral-900 ring-1 ring-neutral-200">
@@ -286,13 +287,14 @@ export function BoletoView({
                   <div className="mt-0.5 text-[13px] font-medium text-foreground">{hoje}</div>
                 </div>
                 <div>
-                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Banco</div>
-                  <div className="mt-0.5 text-[13px] font-medium text-foreground">{dadosLinha.banco.nome}</div>
-                </div>
-                <div>
                   <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Beneficiário</div>
                   <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-MG</div>
                 </div>
+                <div>
+                  <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">CNPJ</div>
+                  <div className="mt-0.5 font-mono text-[12px] font-medium text-foreground">17.218.964/0001-30</div>
+                </div>
+
               </div>
             </div>
 
@@ -324,17 +326,18 @@ export function BoletoView({
           <div className="overflow-hidden rounded-xl border border-neutral-300 bg-white shadow-card print:rounded-none print:border-black print:shadow-none">
             <div className="flex items-stretch border-b-2 border-neutral-900">
               <div className="flex items-center gap-2 border-r-2 border-neutral-900 px-4 py-2">
-                <div className="text-2xl font-extrabold tracking-tight text-neutral-900">
-                  {dadosLinha.banco.nome}
+                <div className="grid h-8 w-8 place-items-center rounded-md bg-crm-green text-primary-foreground text-[11px] font-extrabold">
+                  CRM
                 </div>
-              </div>
-              <div className="flex items-center justify-center border-r-2 border-neutral-900 px-4 py-2 text-2xl font-extrabold text-neutral-900">
-                {dadosLinha.banco.codigo}
+                <div className="text-xl font-extrabold tracking-tight text-neutral-900">
+                  CRM-MG
+                </div>
               </div>
               <div className="flex flex-1 items-center justify-end px-4 py-2 font-mono text-sm font-semibold tracking-wider text-neutral-900 md:text-base">
                 {linha}
               </div>
             </div>
+
 
             <div className="grid grid-cols-12 border-b border-neutral-300">
               <Field
