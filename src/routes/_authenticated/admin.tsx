@@ -7,6 +7,8 @@ import {
   listarBoletosGerados,
   emitirBoleto,
   getDashboardStats,
+  listarDebitos,
+  removerDebitos,
 } from "@/lib/debitos.functions";
 import {
   listarStripeAccounts,
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type TabId = "dashboard" | "import" | "consultas" | "stripe" | "boletos";
+type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos";
 
 type Consulta = {
   id: string;
@@ -89,6 +91,7 @@ type StripeAccount = {
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: "dashboard", label: "Dashboard" },
   { id: "import", label: "Importar débitos" },
+  { id: "debitos", label: "Base de débitos" },
   { id: "consultas", label: "Consultas" },
   { id: "stripe", label: "Contas Stripe" },
   { id: "boletos", label: "Boletos emitidos" },
@@ -147,6 +150,7 @@ function AdminPage() {
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-10">
         {tab === "dashboard" && <DashboardSection />}
         {tab === "import" && <ImportSection />}
+        {tab === "debitos" && <DebitosSection />}
         {tab === "consultas" && <ConsultasSection />}
         {tab === "stripe" && <StripeSection />}
         {tab === "boletos" && <BoletosSection />}
@@ -1106,3 +1110,208 @@ function BoletosSection() {
 
 // Re-export to silence unused-import warnings if needed
 void emitirBoleto;
+
+// ----------------- DÉBITOS -----------------
+type DebitoRow = {
+  id: string;
+  nome: string;
+  cpf: string;
+  crm: string;
+  status: string;
+  debito_codigo: string;
+  descricao: string;
+  valor: number;
+};
+
+function DebitosSection() {
+  const listFn = useServerFn(listarDebitos);
+  const removeFn = useServerFn(removerDebitos);
+
+  const [items, setItems] = useState<DebitoRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await listFn();
+      setItems((r.debitos ?? []) as DebitoRow[]);
+    } finally {
+      setLoading(false);
+    }
+  }, [listFn]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = items.filter((d) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return (
+      d.nome.toLowerCase().includes(q) ||
+      d.crm.includes(q) ||
+      d.cpf.includes(q)
+    );
+  });
+
+  const allSelected = filtered.length > 0 && filtered.every((d) => selected.has(d.id));
+
+  const toggleAll = () => {
+    const next = new Set(selected);
+    if (allSelected) {
+      filtered.forEach((d) => next.delete(d.id));
+    } else {
+      filtered.forEach((d) => next.add(d.id));
+    }
+    setSelected(next);
+  };
+
+  const toggle = (id: string) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelected(next);
+  };
+
+  const handleDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Remover ${selected.size} débito(s) selecionado(s)? Esta ação não pode ser desfeita.`)) return;
+    setDeleting(true);
+    setErr(null);
+    try {
+      const r = await removeFn({ data: { ids: [...selected] } });
+      if (!r.ok) {
+        setErr((r as { ok: false; error?: string }).error ?? "Erro ao remover.");
+        return;
+      }
+      setSelected(new Set());
+      await load();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const fmtBRL = (v: number) =>
+    Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtCPF = (cpf: string) => {
+    const d = cpf.padStart(11, "0");
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+  };
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">Base de débitos</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {items.length.toLocaleString("pt-BR")} registro(s) importados
+            {selected.size > 0 && ` · ${selected.size} selecionado(s)`}.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="h-9 rounded-lg bg-red-600 px-4 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              {deleting ? "Removendo…" : `Remover ${selected.size} selecionado(s)`}
+            </button>
+          )}
+          <button
+            onClick={load}
+            className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-accent"
+          >
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+
+      <div className="mt-4">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por nome, CRM ou CPF…"
+          className="h-10 w-full max-w-sm rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+        />
+        {search && (
+          <p className="mt-1 text-xs text-muted-foreground">{filtered.length} resultado(s) para "{search}".</p>
+        )}
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        {loading ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">Carregando…</p>
+        ) : filtered.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            {search ? "Nenhum resultado para a busca." : "Nenhum débito importado ainda."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-secondary/40">
+                <tr>
+                  <th className="w-10 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      className="h-4 w-4 cursor-pointer accent-crm-green"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CRM</th>
+                  <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">CPF</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Cód. Débito</th>
+                  <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((d) => (
+                  <tr
+                    key={d.id}
+                    onClick={() => toggle(d.id)}
+                    className={`cursor-pointer transition hover:bg-accent/40 ${
+                      selected.has(d.id) ? "bg-crm-green/5" : ""
+                    }`}
+                  >
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(d.id)}
+                        onChange={() => toggle(d.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 cursor-pointer accent-crm-green"
+                      />
+                    </td>
+                    <td className="max-w-[200px] truncate px-4 py-2.5 font-medium text-foreground">{d.nome}</td>
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{d.crm}</td>
+                    <td className="hidden px-4 py-2.5 font-mono text-xs text-muted-foreground sm:table-cell">{fmtCPF(d.cpf)}</td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                          d.status === "POSITIVO"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {d.status}
+                      </span>
+                    </td>
+                    <td className="hidden px-4 py-2.5 font-mono text-xs text-muted-foreground md:table-cell">{d.debito_codigo}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-foreground">{fmtBRL(d.valor)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}

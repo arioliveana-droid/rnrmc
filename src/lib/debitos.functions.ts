@@ -426,3 +426,38 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       serie7d: dayBuckets,
     };
   });
+
+export const listarDebitos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("debitos")
+      .select("id, nome, cpf, crm, status, debito_codigo, descricao, valor")
+      .order("nome", { ascending: true })
+      .limit(5000);
+    if (error) {
+      console.error("listarDebitos", error);
+      return { debitos: [] };
+    }
+    return { debitos: data ?? [] };
+  });
+
+export const removerDebitos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({ ids: z.array(z.string().uuid()).min(1).max(500) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("debitos")
+      .delete()
+      .in("id", data.ids);
+    if (error) {
+      console.error("removerDebitos", error);
+      return { ok: false as const, error: error.message };
+    }
+    return { ok: true as const };
+  });
+
