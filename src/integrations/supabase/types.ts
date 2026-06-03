@@ -56,13 +56,17 @@ export type Database = {
           debito_codigo: string
           descricao: string | null
           gerado_em: string
+          hosted_voucher_url: string | null
           id: string
           ip: string | null
           linha_digitavel: string
           nome: string
+          pdf_url: string | null
           stripe_account_id: string | null
+          stripe_payment_intent_id: string | null
           user_agent: string | null
           valor: number
+          vencimento: string | null
           vezes_copiado: number
         }
         Insert: {
@@ -73,13 +77,17 @@ export type Database = {
           debito_codigo: string
           descricao?: string | null
           gerado_em?: string
+          hosted_voucher_url?: string | null
           id?: string
           ip?: string | null
           linha_digitavel: string
           nome: string
+          pdf_url?: string | null
           stripe_account_id?: string | null
+          stripe_payment_intent_id?: string | null
           user_agent?: string | null
           valor: number
+          vencimento?: string | null
           vezes_copiado?: number
         }
         Update: {
@@ -90,13 +98,17 @@ export type Database = {
           debito_codigo?: string
           descricao?: string | null
           gerado_em?: string
+          hosted_voucher_url?: string | null
           id?: string
           ip?: string | null
           linha_digitavel?: string
           nome?: string
+          pdf_url?: string | null
           stripe_account_id?: string | null
+          stripe_payment_intent_id?: string | null
           user_agent?: string | null
           valor?: number
+          vencimento?: string | null
           vezes_copiado?: number
         }
         Relationships: [
