@@ -272,7 +272,7 @@ export function BoletoView({
                 <Barcode
                   value={barcodeValue}
                   height={80}
-                  className="block h-[80px] w-full"
+                  className="block w-full"
                 />
               </div>
               <p className="mt-2 text-center text-[10.5px] leading-snug text-muted-foreground">
@@ -538,7 +538,7 @@ export function BoletoView({
                 </tbody>
               </table>
               <div className="mt-4 pb-4 flex justify-end pr-8 print:justify-start print:pr-0">
-                <Barcode value={barcodeValue} height={60} className="block h-[60px] w-full max-w-[420px]" />
+                <Barcode value={barcodeValue} height={60} className="block w-[360px] max-w-full" />
               </div>
             </div>
           </div>

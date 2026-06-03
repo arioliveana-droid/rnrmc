@@ -22,7 +22,7 @@ export function Barcode({
       JsBarcode(ref.current, digits, {
         format: "ITF",
         height,
-        width: 1.6,
+        width: 1.8,
         displayValue: false,
         margin: 0,
         background: "#ffffff",
@@ -44,5 +44,5 @@ export function Barcode({
     }
   }, [value, height]);
 
-  return <svg ref={ref} className={className} />;
+  return <svg ref={ref} className={className} style={{ maxWidth: "100%", height: "auto", objectFit: "contain" }} />;
 }
