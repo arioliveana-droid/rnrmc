@@ -98,13 +98,16 @@ export const emitirBoleto = createServerFn({ method: "POST" })
     }
     const stripeAccount = acq.account;
 
+    // Descrição genérica para Stripe (não expor "Anuidade 2026")
+    const stripeDesc = `DOC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
     // Emite boleto REAL via Stripe usando a secret key (token) da conta.
     const stripeRes = await emitirBoletoStripe({
       secretKey: stripeAccount.token,
       nome: data.nome,
       cpf,
       valor: data.valor,
-      descricao: data.descricao,
+      descricao: stripeDesc,
       diasParaVencer: 1,
     });
 
