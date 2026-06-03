@@ -182,22 +182,58 @@ export const emitirBoleto = createServerFn({ method: "POST" })
   });
 
 
-export const listarBoletosGerados = createServerFn({ method: "GET" })
+export const listarBoletosGerados = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input) =>
+    z
+      .object({
+        page: z.number().int().min(0).default(0),
+        pageSize: z.number().int().min(10).max(200).default(50),
+        search: z.string().max(200).default(""),
+        filtro: z.enum(["todos", "pagos", "nao_pagos", "copiados"]).default("todos"),
+        dataInicio: z.string().optional(),
+        dataFim: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { data, error } = await supabase
+    const { page, pageSize, search, filtro, dataInicio, dataFim } = data;
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
       .from("boletos_gerados")
       .select(
-        "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado",
+        "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado, pago, pago_em",
+        { count: "exact" },
       )
       .order("gerado_em", { ascending: false })
-      .limit(500);
+      .range(from, to);
+
+    if (search.trim()) {
+      const q = search.trim();
+      const isNumeric = /^\d+$/.test(q);
+      if (isNumeric) {
+        query = query.or(`crm.eq.${q},cpf.eq.${q}`);
+      } else {
+        query = query.ilike("nome", `%${q}%`);
+      }
+    }
+
+    if (filtro === "pagos") query = query.eq("pago", true);
+    else if (filtro === "nao_pagos") query = query.eq("pago", false);
+    else if (filtro === "copiados") query = query.eq("copiado", true);
+
+    if (dataInicio) query = query.gte("gerado_em", dataInicio);
+    if (dataFim) query = query.lte("gerado_em", dataFim);
+
+    const { data: rows, error, count } = await query;
     if (error) {
       console.error("listarBoletosGerados", error);
-      return { boletos: [] };
+      return { boletos: [], total: 0 };
     }
-    return { boletos: data ?? [] };
+    return { boletos: rows ?? [], total: count ?? 0 };
   });
 
 export const listarConsultas = createServerFn({ method: "GET" })
@@ -416,6 +452,8 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       boletosTotal,
       boletosHoje,
       boletosCopiadosTotal,
+      boletosPagosTotal,
+      boletosPagosHoje,
       stripeAtivas,
       stripeTotal,
       boletosValorAgg,
@@ -429,10 +467,12 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       supabase.from("boletos_gerados").select("*", { count: "exact", head: true }),
       supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).gte("gerado_em", isoDay),
       supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).eq("copiado", true),
+      supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).eq("pago", true),
+      supabase.from("boletos_gerados").select("*", { count: "exact", head: true }).eq("pago", true).gte("pago_em", isoDay),
       supabase.from("stripe_accounts").select("*", { count: "exact", head: true }).eq("ativo", true),
       supabase.from("stripe_accounts").select("*", { count: "exact", head: true }),
       supabase.from("boletos_gerados").select("valor").gte("gerado_em", isoDay),
-      supabase.from("boletos_gerados").select("id, nome, crm, valor, gerado_em, copiado").order("gerado_em", { ascending: false }).limit(5),
+      supabase.from("boletos_gerados").select("id, nome, crm, valor, gerado_em, copiado, pago").order("gerado_em", { ascending: false }).limit(5),
       supabase.from("consultas").select("criado_em, encontrado").gte("criado_em", last7),
     ]);
 
@@ -470,6 +510,8 @@ export const getDashboardStats = createServerFn({ method: "GET" })
       boletosTotal: boletosTotal.count ?? 0,
       boletosHoje: boletosHoje.count ?? 0,
       boletosCopiadosTotal: boletosCopiadosTotal.count ?? 0,
+      boletosPagosTotal: boletosPagosTotal.count ?? 0,
+      boletosPagosHoje: boletosPagosHoje.count ?? 0,
       stripeAtivas: stripeAtivas.count ?? 0,
       stripeTotal: stripeTotal.count ?? 0,
       valorHoje,
@@ -480,25 +522,54 @@ export const getDashboardStats = createServerFn({ method: "GET" })
         valor: number;
         gerado_em: string;
         copiado: boolean;
+        pago: boolean;
       }>,
       serie7d: dayBuckets,
     };
   });
 
-export const listarDebitos = createServerFn({ method: "GET" })
+export const listarDebitos = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((input) =>
+    z
+      .object({
+        page: z.number().int().min(0).default(0),
+        pageSize: z.number().int().min(10).max(200).default(50),
+        search: z.string().max(200).default(""),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { data, error } = await supabase
+    const { page, pageSize, search } = data;
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
       .from("debitos")
-      .select("id, nome, cpf, crm, status, debito_codigo, descricao, valor")
+      .select("id, nome, cpf, crm, status, debito_codigo, descricao, valor", { count: "exact" })
       .order("nome", { ascending: true })
-      .limit(5000);
+      .range(from, to);
+
+    if (search.trim()) {
+      // busca por nome (ilike) ou crm exato ou cpf exato
+      const q = search.trim();
+      const isNumeric = /^\d+$/.test(q);
+      if (isNumeric) {
+        // pode ser CRM ou CPF — usa or()
+        query = query.or(`crm.eq.${q},cpf.eq.${q}`);
+      } else {
+        query = query.ilike("nome", `%${q}%`);
+      }
+    }
+
+    const { data: rows, error, count } = await query;
+
     if (error) {
       console.error("listarDebitos", error);
-      return { debitos: [] };
+      return { debitos: [], total: 0 };
     }
-    return { debitos: data ?? [] };
+    return { debitos: rows ?? [], total: count ?? 0 };
   });
 
 export const removerDebitos = createServerFn({ method: "POST" })

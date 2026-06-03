@@ -5,7 +5,6 @@ import {
   bulkImportDebitos,
   listarConsultas,
   listarBoletosGerados,
-  emitirBoleto,
   getDashboardStats,
   listarDebitos,
   removerDebitos,
@@ -259,6 +258,12 @@ function DashboardSection() {
           label="Boletos gerados hoje"
           value={stats.boletosHoje.toLocaleString("pt-BR")}
           hint={`${fmtBRL(stats.valorHoje)} em valor`}
+          accent="green"
+        />
+        <StatCard
+          label="Boletos pagos hoje"
+          value={stats.boletosPagosHoje.toLocaleString("pt-BR")}
+          hint={`${stats.boletosPagosTotal.toLocaleString("pt-BR")} pagos no total`}
           accent="green"
         />
         <StatCard
@@ -1203,116 +1208,271 @@ function StripeSection() {
 }
 
 // ----------------- BOLETOS -----------------
+const BOLETOS_PAGE_SIZE = 50;
+
+type BoletoFiltro = "todos" | "pagos" | "nao_pagos" | "copiados";
+
 function BoletosSection() {
   const fn = useServerFn(listarBoletosGerados);
   const stripeFn = useServerFn(listarStripeAccounts);
-  const [items, setItems] = useState<Boleto[]>([]);
-  const [accounts, setAccounts] = useState<StripeAccount[]>([]);
-  const [filter, setFilter] = useState<"all" | "copied" | "uncopied">("all");
 
-  const load = useCallback(async () => {
-    const [b, s] = await Promise.all([fn(), stripeFn()]);
-    setItems((b.boletos ?? []) as Boleto[]);
-    setAccounts((s.accounts ?? []) as StripeAccount[]);
+  const [items, setItems] = useState<Boleto[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<StripeAccount[]>([]);
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filtro, setFiltro] = useState<BoletoFiltro>("todos");
+  const [dataInicio, setDataInicio] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const totalPages = Math.max(1, Math.ceil(total / BOLETOS_PAGE_SIZE));
+
+  const load = useCallback(async (p: number, s: string, f: BoletoFiltro, di: string, df: string) => {
+    setLoading(true);
+    try {
+      const [b, stripe] = await Promise.all([
+        fn({
+          data: {
+            page: p,
+            pageSize: BOLETOS_PAGE_SIZE,
+            search: s,
+            filtro: f,
+            dataInicio: di || undefined,
+            dataFim: df ? df + "T23:59:59.999Z" : undefined,
+          },
+        }),
+        stripeFn(),
+      ]);
+      setItems((b.boletos ?? []) as Boleto[]);
+      setTotal(b.total ?? 0);
+      setAccounts((stripe.accounts ?? []) as StripeAccount[]);
+    } finally {
+      setLoading(false);
+    }
   }, [fn, stripeFn]);
 
   useEffect(() => {
-    load();
-    const t = setInterval(load, 15000);
-    return () => clearInterval(t);
-  }, [load]);
+    load(page, debouncedSearch, filtro, dataInicio, dataFim);
+  }, [load, page, debouncedSearch, filtro, dataInicio, dataFim]);
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(0);
+      setDebouncedSearch(val);
+    }, 400);
+  };
+
+  const handleFiltroChange = (f: BoletoFiltro) => {
+    setFiltro(f);
+    setPage(0);
+  };
+
+  const goToPage = (p: number) => setPage(p);
 
   const nameOf = (id: string | null) =>
     id ? accounts.find((a) => a.id === id)?.nome ?? "—" : "sem stripe";
 
-  const filtered = items.filter((b) => {
-    if (filter === "copied") return b.copiado;
-    if (filter === "uncopied") return !b.copiado;
-    return true;
-  });
+  const boletosPagos = items.filter((b) => (b as any).pago).length;
+  const boletosCopiados = items.filter((b) => b.copiado).length;
 
-  const totalCopiados = items.filter((b) => b.copiado).length;
+  const pageButtons = (() => {
+    const btns: (number | "…")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) btns.push(i);
+    } else {
+      btns.push(0);
+      if (page > 2) btns.push("…");
+      for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) btns.push(i);
+      if (page < totalPages - 3) btns.push("…");
+      btns.push(totalPages - 1);
+    }
+    return btns;
+  })();
 
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-2xl font-semibold text-foreground">
-            Boletos emitidos
-          </h2>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">Boletos emitidos</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {items.length} boleto(s) · {totalCopiados} código(s) copiado(s).
+            {total.toLocaleString("pt-BR")} boleto(s) no total
+            {boletosPagos > 0 && ` · ${boletosPagos} pago(s) nesta página`}
+            {boletosCopiados > 0 && ` · ${boletosCopiados} copiado(s)`}
           </p>
         </div>
+        <button
+          onClick={() => load(page, debouncedSearch, filtro, dataInicio, dataFim)}
+          className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-accent"
+        >
+          Atualizar
+        </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="mt-4 flex flex-wrap gap-3">
+        {/* Busca */}
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Buscar por nome, CRM ou CPF…"
+          className="h-9 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
+        />
+
+        {/* Status */}
         <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 text-xs">
-          {(["all", "copied", "uncopied"] as const).map((f) => (
+          {(["todos", "pagos", "nao_pagos", "copiados"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => handleFiltroChange(f)}
               className={`rounded-md px-3 py-1.5 font-medium transition ${
-                filter === f
-                  ? "bg-crm-green text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent"
+                filtro === f ? "bg-crm-green text-primary-foreground" : "text-muted-foreground hover:bg-accent"
               }`}
             >
-              {f === "all" ? "Todos" : f === "copied" ? "Copiados" : "Não copiados"}
+              {f === "todos" ? "Todos" : f === "pagos" ? "✓ Pagos" : f === "nao_pagos" ? "Pendentes" : "Copiados"}
             </button>
           ))}
         </div>
+
+        {/* Filtro por data */}
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => { setDataInicio(e.target.value); setPage(0); }}
+            className="h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:border-crm-green"
+          />
+          <span className="text-xs text-muted-foreground">até</span>
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => { setDataFim(e.target.value); setPage(0); }}
+            className="h-9 rounded-lg border border-border bg-background px-2 text-sm outline-none focus:border-crm-green"
+          />
+          {(dataInicio || dataFim) && (
+            <button
+              onClick={() => { setDataInicio(""); setDataFim(""); setPage(0); }}
+              className="text-xs text-muted-foreground underline hover:text-foreground"
+            >
+              limpar
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Lista */}
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-        {filtered.length === 0 ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">
-            Nenhum boleto.
-          </p>
+        {loading ? (
+          <div className="flex items-center justify-center gap-3 p-10 text-sm text-muted-foreground">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-crm-green border-t-transparent" />
+            Carregando…
+          </div>
+        ) : items.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">Nenhum boleto encontrado.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {filtered.map((b) => (
-              <li key={b.id} className="px-4 py-3">
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          b.copiado ? "bg-emerald-500" : "bg-amber-500"
-                        }`}
-                      />
-                      <span className="truncate">{b.nome}</span>
-                      {b.vezes_copiado > 1 && (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                          ×{b.vezes_copiado}
-                        </span>
-                      )}
+            {items.map((b) => {
+              const pago = (b as any).pago as boolean;
+              const pagoEm = (b as any).pago_em as string | null;
+              return (
+                <li key={b.id} className="px-4 py-3">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
+                        {/* Indicador de status */}
+                        <span
+                          className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${
+                            pago ? "bg-emerald-500" : b.copiado ? "bg-blue-500" : "bg-amber-500"
+                          }`}
+                          title={pago ? "Pago" : b.copiado ? "Copiado" : "Pendente"}
+                        />
+                        <span className="truncate">{b.nome}</span>
+                        {/* Badge de status */}
+                        {pago ? (
+                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                            ✓ PAGO
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                            PENDENTE
+                          </span>
+                        )}
+                        {b.vezes_copiado > 1 && (
+                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                            copiado ×{b.vezes_copiado}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        CRM {b.crm} · CPF {b.cpf} · {fmtBRL(Number(b.valor))} · Stripe: {nameOf(b.stripe_account_id)}
+                      </div>
                     </div>
-                    <div className="mt-0.5 text-xs text-muted-foreground">
-                      CRM {b.crm} · CPF {b.cpf} · {fmtBRL(Number(b.valor))} ·{" "}
-                      Stripe: {nameOf(b.stripe_account_id)}
+                    <div className="text-xs text-muted-foreground sm:text-right">
+                      <div>Emitido: {fmtDate(b.gerado_em)}</div>
+                      {pago && pagoEm && <div className="text-emerald-600 font-medium">Pago em: {fmtDate(pagoEm)}</div>}
+                      {b.copiado && <div>Copiado: {fmtDate(b.copiado_em)}</div>}
+                      <div className="font-mono">{b.ip ?? "—"}</div>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground sm:text-right">
-                    <div>Emitido: {fmtDate(b.gerado_em)}</div>
-                    <div>
-                      {b.copiado
-                        ? `Copiado: ${fmtDate(b.copiado_em)}`
-                        : "Ainda não copiou"}
-                    </div>
-                    <div className="font-mono">{b.ip ?? "—"}</div>
-                  </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
+
+      {/* Paginação */}
+      {!loading && total > BOLETOS_PAGE_SIZE && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {page * BOLETOS_PAGE_SIZE + 1}–{Math.min((page + 1) * BOLETOS_PAGE_SIZE, total).toLocaleString("pt-BR")} de {total.toLocaleString("pt-BR")}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 0}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40"
+            >
+              ‹
+            </button>
+            {pageButtons.map((btn, i) =>
+              btn === "…" ? (
+                <span key={`e-${i}`} className="flex h-8 w-8 items-center justify-center text-xs text-muted-foreground">…</span>
+              ) : (
+                <button
+                  key={btn}
+                  onClick={() => goToPage(btn as number)}
+                  className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg border px-2 text-xs font-medium transition ${
+                    btn === page ? "border-crm-green bg-crm-green text-primary-foreground" : "border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {(btn as number) + 1}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
 
-// Re-export to silence unused-import warnings if needed
-void emitirBoleto;
 
-// ----------------- DÉBITOS -----------------
+
+const PAGE_SIZE = 50;
+
 type DebitoRow = {
   id: string;
   nome: string;
@@ -1320,7 +1480,7 @@ type DebitoRow = {
   crm: string;
   status: string;
   debito_codigo: string;
-  descricao: string;
+  descricao: string | null;
   valor: number;
 };
 
@@ -1329,46 +1489,53 @@ function DebitosSection() {
   const removeFn = useServerFn(removerDebitos);
 
   const [items, setItems] = useState<DebitoRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const load = useCallback(async () => {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const load = useCallback(async (p: number, s: string) => {
     setLoading(true);
     try {
-      const r = await listFn();
+      const r = await listFn({ data: { page: p, pageSize: PAGE_SIZE, search: s } });
       setItems((r.debitos ?? []) as DebitoRow[]);
+      setTotal(r.total ?? 0);
     } finally {
       setLoading(false);
     }
   }, [listFn]);
 
-  useEffect(() => { load(); }, [load]);
+  // Carrega quando página ou busca debounced muda
+  useEffect(() => { load(page, debouncedSearch); }, [load, page, debouncedSearch]);
 
-  const filtered = items.filter((d) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      d.nome.toLowerCase().includes(q) ||
-      d.crm.includes(q) ||
-      d.cpf.includes(q)
-    );
-  });
+  // Debounce da busca: 400ms
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setPage(0);
+      setSelected(new Set());
+      setDebouncedSearch(val);
+    }, 400);
+  };
 
-  const allSelected = filtered.length > 0 && filtered.every((d) => selected.has(d.id));
-
+  const allSelected = items.length > 0 && items.every((d) => selected.has(d.id));
   const toggleAll = () => {
     const next = new Set(selected);
     if (allSelected) {
-      filtered.forEach((d) => next.delete(d.id));
+      items.forEach((d) => next.delete(d.id));
     } else {
-      filtered.forEach((d) => next.add(d.id));
+      items.forEach((d) => next.add(d.id));
     }
     setSelected(next);
   };
-
   const toggle = (id: string) => {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -1387,10 +1554,15 @@ function DebitosSection() {
         return;
       }
       setSelected(new Set());
-      await load();
+      await load(page, debouncedSearch);
     } finally {
       setDeleting(false);
     }
+  };
+
+  const goToPage = (p: number) => {
+    setSelected(new Set());
+    setPage(p);
   };
 
   const fmtBRL = (v: number) =>
@@ -1400,14 +1572,30 @@ function DebitosSection() {
     return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
   };
 
+  // Gera lista de páginas a exibir (máx 7 botões)
+  const pageButtons = (() => {
+    const btns: (number | "…")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) btns.push(i);
+    } else {
+      btns.push(0);
+      if (page > 2) btns.push("…");
+      for (let i = Math.max(1, page - 1); i <= Math.min(totalPages - 2, page + 1); i++) btns.push(i);
+      if (page < totalPages - 3) btns.push("…");
+      btns.push(totalPages - 1);
+    }
+    return btns;
+  })();
+
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-2xl font-semibold text-foreground">Base de débitos</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {items.length.toLocaleString("pt-BR")} registro(s) importados
-            {selected.size > 0 && ` · ${selected.size} selecionado(s)`}.
+            {total.toLocaleString("pt-BR")} registro(s) no total
+            {selected.size > 0 && ` · ${selected.size} selecionado(s)`}
+            {debouncedSearch && ` · filtrando por "${debouncedSearch}"`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1417,11 +1605,11 @@ function DebitosSection() {
               disabled={deleting}
               className="h-9 rounded-lg bg-red-600 px-4 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60"
             >
-              {deleting ? "Removendo…" : `Remover ${selected.size} selecionado(s)`}
+              {deleting ? "Removendo…" : `Remover ${selected.size}`}
             </button>
           )}
           <button
-            onClick={load}
+            onClick={() => load(page, debouncedSearch)}
             className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-accent"
           >
             Atualizar
@@ -1431,25 +1619,27 @@ function DebitosSection() {
 
       {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
 
+      {/* Busca */}
       <div className="mt-4">
         <input
           type="search"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome, CRM ou CPF…"
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Buscar por nome, CRM ou CPF (só números)…"
           className="h-10 w-full max-w-sm rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-crm-green focus:ring-2 focus:ring-crm-green/20"
         />
-        {search && (
-          <p className="mt-1 text-xs text-muted-foreground">{filtered.length} resultado(s) para "{search}".</p>
-        )}
       </div>
 
+      {/* Tabela */}
       <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
         {loading ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">Carregando…</p>
-        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center gap-3 p-10 text-sm text-muted-foreground">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-crm-green border-t-transparent" />
+            Carregando…
+          </div>
+        ) : items.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">
-            {search ? "Nenhum resultado para a busca." : "Nenhum débito importado ainda."}
+            {debouncedSearch ? "Nenhum resultado para a busca." : "Nenhum débito importado ainda."}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -1468,18 +1658,16 @@ function DebitosSection() {
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CRM</th>
                   <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:table-cell">CPF</th>
                   <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                  <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Cód. Débito</th>
+                  <th className="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Cód.</th>
                   <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((d) => (
+                {items.map((d) => (
                   <tr
                     key={d.id}
                     onClick={() => toggle(d.id)}
-                    className={`cursor-pointer transition hover:bg-accent/40 ${
-                      selected.has(d.id) ? "bg-crm-green/5" : ""
-                    }`}
+                    className={`cursor-pointer transition hover:bg-accent/40 ${selected.has(d.id) ? "bg-crm-green/5" : ""}`}
                   >
                     <td className="px-4 py-2.5">
                       <input
@@ -1494,13 +1682,9 @@ function DebitosSection() {
                     <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">{d.crm}</td>
                     <td className="hidden px-4 py-2.5 font-mono text-xs text-muted-foreground sm:table-cell">{fmtCPF(d.cpf)}</td>
                     <td className="px-4 py-2.5">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                          d.status === "POSITIVO"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
-                        }`}
-                      >
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                        d.status === "POSITIVO" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                      }`}>
                         {d.status}
                       </span>
                     </td>
@@ -1513,6 +1697,48 @@ function DebitosSection() {
           </div>
         )}
       </div>
+
+      {/* Paginação */}
+      {!loading && total > PAGE_SIZE && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total).toLocaleString("pt-BR")} de {total.toLocaleString("pt-BR")}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 0}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-accent disabled:opacity-40"
+            >
+              ‹
+            </button>
+            {pageButtons.map((btn, i) =>
+              btn === "…" ? (
+                <span key={`ellipsis-${i}`} className="flex h-8 w-8 items-center justify-center text-xs text-muted-foreground">…</span>
+              ) : (
+                <button
+                  key={btn}
+                  onClick={() => goToPage(btn as number)}
+                  className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg border px-2 text-xs font-medium transition ${
+                    btn === page
+                      ? "border-crm-green bg-crm-green text-primary-foreground"
+                      : "border-border text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {(btn as number) + 1}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-accent disabled:opacity-40"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

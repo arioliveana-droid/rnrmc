@@ -230,7 +230,85 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
     .eq("id", a.id);
 }
 
-// Tick global: fecha janelas vencidas e zera contagem diária. Chamada pelo cron.
+// ─────────────────────────────────────────────────────────────────────────────
+// Polling de status de pagamento — SEPARADO do tick de rotação de nomes.
+// Exportado para ser chamado por um endpoint/cron dedicado, independente.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<number> {
+  // Busca boletos não pagos desta conta que têm payment_intent registrado
+  const { data: pendentes } = await supabaseAdmin
+    .from("boletos_gerados")
+    .select("id, stripe_payment_intent_id")
+    .eq("stripe_account_id", acc.id)
+    .eq("pago", false)
+    .not("stripe_payment_intent_id", "is", null)
+    .limit(50);
+
+  if (!pendentes || pendentes.length === 0) return 0;
+
+  let pagos = 0;
+  const nowIso = new Date().toISOString();
+
+  for (const boleto of pendentes) {
+    const piId = boleto.stripe_payment_intent_id as string;
+    try {
+      const res = await fetch(`https://api.stripe.com/v1/payment_intents/${piId}`, {
+        headers: {
+          Authorization: `Bearer ${acc.token}`,
+          "Stripe-Version": "2023-10-16",
+        },
+      });
+
+      if (!res.ok) continue;
+
+      const pi = await res.json() as { status?: string };
+
+      if (pi.status === "succeeded") {
+        const { error } = await supabaseAdmin
+          .from("boletos_gerados")
+          .update({ pago: true, pago_em: nowIso })
+          .eq("id", boleto.id)
+          .eq("pago", false);
+
+        if (!error) pagos++;
+      }
+    } catch {
+      // ignora erros de rede individuais — próximo poll tenta de novo
+    }
+  }
+
+  return pagos;
+}
+
+export async function pollAllPaymentStatuses(): Promise<{ pagos: number; contas: number }> {
+  const { data: contas } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("ativo", true)
+    .gt("total_boletos", 0);
+
+  if (!contas || contas.length === 0) return { pagos: 0, contas: 0 };
+
+  let totalPagos = 0;
+  const CONCURRENCY = 3;
+  const chunks: StripeAccountRow[][] = [];
+  for (let i = 0; i < contas.length; i += CONCURRENCY) {
+    chunks.push((contas as StripeAccountRow[]).slice(i, i + CONCURRENCY));
+  }
+  for (const chunk of chunks) {
+    const results = await Promise.all(chunk.map(pollPaymentStatusForAccount));
+    totalPagos += results.reduce((a, b) => a + b, 0);
+  }
+
+  return { pagos: totalPagos, contas: contas.length };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tick global: fecha janelas vencidas e zera contagem diária.
+// Chamado pelo pg_cron a cada 1 minuto. Responsabilidade única: rotação de nomes.
+// O polling de pagamentos é feito por um endpoint separado (/api/public/hooks/payment-poll).
 export async function tickOrchestrator(): Promise<{ closed: number }> {
   await resetDailyIfNeeded();
   const nowIso = new Date().toISOString();
