@@ -19,7 +19,6 @@ async function getConnect(): Promise<
     };
   }
 > {
-  // @ts-expect-error - cloudflare:sockets é fornecido pelo runtime do Workers
   const moduleName = "cloudflare:" + "sockets";
   const mod = await import(/* @vite-ignore */ moduleName);
   return mod.connect;
