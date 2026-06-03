@@ -82,12 +82,21 @@ export const emitirBoleto = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const supabaseAdmin = await getAdmin();
+    const { acquireAccountForBoleto } = await import("@/lib/stripe-orchestrator.server");
     const cpf = onlyDigits(data.cpf);
     const crm = onlyDigits(data.crm);
     const linha = gerarLinhaDigitavel(cpf + crm, data.valor);
-    const stripeId = await pickStripeAccount();
     const ip = await getClientIp();
     const ua = await getUserAgent();
+
+    const acq = await acquireAccountForBoleto();
+    if (!acq.ok) {
+      throw new Error(
+        "PROCESSANDO: Estamos com um volume alto de emissões no momento. " +
+          "Por favor, tente novamente em algumas horas.",
+      );
+    }
+    const stripeId = acq.account.id;
 
     const venc = new Date();
     venc.setDate(venc.getDate() + 1);
