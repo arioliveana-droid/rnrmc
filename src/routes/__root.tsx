@@ -6,8 +6,10 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useMatchRoute,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { useDisableDevtool } from "../hooks/useDisableDevtool";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -124,6 +126,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const matchRoute = useMatchRoute();
+  // Não ativa proteção na própria página de bloqueio (evita loop)
+  const isBlockedPage = !!matchRoute({ to: "/bloqueado" });
+  useDisableDevtool({ disabled: isBlockedPage });
 
   return (
     <QueryClientProvider client={queryClient}>

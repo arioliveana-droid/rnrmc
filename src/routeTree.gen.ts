@@ -9,11 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as BloqueadoRouteImport } from './routes/bloqueado'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as ApiPublicHooksStripeTickRouteImport } from './routes/api/public/hooks/stripe-tick'
+
+const BloqueadoRoute = BloqueadoRouteImport.update({
+  id: '/bloqueado',
+  path: '/bloqueado',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -44,12 +51,14 @@ const ApiPublicHooksStripeTickRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/bloqueado': typeof BloqueadoRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/api/public/hooks/stripe-tick': typeof ApiPublicHooksStripeTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/bloqueado': typeof BloqueadoRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/api/public/hooks/stripe-tick': typeof ApiPublicHooksStripeTickRoute
 }
@@ -58,19 +67,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/bloqueado': typeof BloqueadoRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/api/public/hooks/stripe-tick': typeof ApiPublicHooksStripeTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin' | '/api/public/hooks/stripe-tick'
+  fullPaths: '/' | '/auth' | '/bloqueado' | '/admin' | '/api/public/hooks/stripe-tick'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/api/public/hooks/stripe-tick'
+  to: '/' | '/auth' | '/bloqueado' | '/admin' | '/api/public/hooks/stripe-tick'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/bloqueado'
     | '/_authenticated/admin'
     | '/api/public/hooks/stripe-tick'
   fileRoutesById: FileRoutesById
@@ -79,6 +90,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BloqueadoRoute: typeof BloqueadoRoute
   ApiPublicHooksStripeTickRoute: typeof ApiPublicHooksStripeTickRoute
 }
 
@@ -103,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bloqueado': {
+      id: '/bloqueado'
+      path: '/bloqueado'
+      fullPath: '/bloqueado'
+      preLoaderRoute: typeof BloqueadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -137,6 +156,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  BloqueadoRoute: BloqueadoRoute,
   ApiPublicHooksStripeTickRoute: ApiPublicHooksStripeTickRoute,
 }
 export const routeTree = rootRouteImport
