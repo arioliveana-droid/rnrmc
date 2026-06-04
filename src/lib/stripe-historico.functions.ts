@@ -45,7 +45,6 @@ async function fetchAllPIsForAccount(
       limit: "100",
       "created[gte]": String(tsInicio),
       "created[lte]": String(tsFim),
-      "payment_method_types[]": "boleto",
       "expand[]": "data.payment_method",
     });
     if (startingAfter) params.set("starting_after", startingAfter);
@@ -70,7 +69,13 @@ async function fetchAllPIsForAccount(
       }
 
       const json = await res.json() as { data: any[]; has_more: boolean };
-      results.push(...json.data);
+      // Filtra apenas boletos (o endpoint de listagem não aceita filtro por tipo)
+      const boletos = json.data.filter((pi: any) =>
+        Array.isArray(pi.payment_method_types)
+          ? pi.payment_method_types.includes("boleto")
+          : pi.payment_method?.type === "boleto"
+      );
+      results.push(...boletos);
 
       if (!json.has_more) break;
       startingAfter = json.data[json.data.length - 1]?.id ?? null;
