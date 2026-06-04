@@ -21,13 +21,19 @@ import {
   atualizarStripeAccount,
   resetarLimitesStripe,
 } from "@/lib/stripe.functions";
+import {
+  buscarTransacoesStripeHistorico,
+  compararCPFsComDebitos,
+  removerDebitosQuePagaram,
+  type TransacaoStripe,
+} from "@/lib/stripe-historico.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos";
+type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos" | "historico";
 
 type Consulta = {
   id: string;
@@ -98,6 +104,7 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "consultas", label: "Consultas" },
   { id: "stripe", label: "Contas Stripe" },
   { id: "boletos", label: "Boletos emitidos" },
+  { id: "historico", label: "🔍 Verificador de pagamentos" },
 ];
 
 const fmtDate = (s: string | null) =>
@@ -157,6 +164,7 @@ function AdminPage() {
         {tab === "consultas" && <ConsultasSection />}
         {tab === "stripe" && <StripeSection />}
         {tab === "boletos" && <BoletosSection />}
+        {tab === "historico" && <HistoricoSection />}
       </main>
     </div>
   );
@@ -1737,6 +1745,472 @@ function DebitosSection() {
               ›
             </button>
           </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HISTÓRICO / VERIFICADOR DE PAGAMENTOS
+// Busca transações Stripe por período → cruza CPFs com débitos → remove pagos
+// ─────────────────────────────────────────────────────────────────────────────
+
+type DebitoMatch = {
+  id: string;
+  nome: string;
+  cpf: string;
+  crm: string;
+  status: string;
+  debito_codigo: string;
+  descricao: string | null;
+  valor: number;
+  // enriquecido na comparação
+  pi_status?: string;    // status do PI na Stripe
+  pi_valor?: number;     // valor pago na Stripe
+  pi_data?: string;      // data da transação
+  pi_conta?: string;     // nome da conta Stripe
+};
+
+function HistoricoSection() {
+  const buscarFn = useServerFn(buscarTransacoesStripeHistorico);
+  const compararFn = useServerFn(compararCPFsComDebitos);
+  const removerFn = useServerFn(removerDebitosQuePagaram);
+
+  // ── Estado da busca ──
+  const hoje = new Date().toISOString().slice(0, 10);
+  const primeiroDiaMes = hoje.slice(0, 8) + "01";
+  const [dataInicio, setDataInicio] = useState(primeiroDiaMes);
+  const [dataFim, setDataFim] = useState(hoje);
+  const [buscando, setBuscando] = useState(false);
+  const [resultado, setResultado] = useState<{
+    transacoes: TransacaoStripe[];
+    erros: { conta: string; erro: string }[];
+    total: number;
+    pagos: number;
+    pendentes: number;
+  } | null>(null);
+
+  // ── Estado da comparação ──
+  const [comparando, setComparando] = useState(false);
+  const [matches, setMatches] = useState<DebitoMatch[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [removendo, setRemovendo] = useState(false);
+  const [removidosMensagem, setRemovidosMensagem] = useState<string | null>(null);
+  const [erroMsg, setErroMsg] = useState<string | null>(null);
+
+  // ── Filtro local de status na tabela ──
+  const [filtroStatus, setFiltroStatus] = useState<"todos" | "succeeded" | "requires_action" | "canceled">("todos");
+  const [buscaLocal, setBuscaLocal] = useState("");
+  const [paginaAtual, setPaginaAtual] = useState(0);
+  const PG = 100;
+
+  const transacoesFiltradas = (resultado?.transacoes ?? []).filter((t) => {
+    if (filtroStatus !== "todos" && t.status !== filtroStatus) return false;
+    if (buscaLocal.trim()) {
+      const q = buscaLocal.toLowerCase();
+      return (
+        (t.nome_stripe ?? "").toLowerCase().includes(q) ||
+        (t.boleto_nome ?? "").toLowerCase().includes(q) ||
+        (t.cpf ?? "").includes(q) ||
+        (t.descricao ?? "").toLowerCase().includes(q) ||
+        t.conta_nome.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+  const totalPgs = Math.max(1, Math.ceil(transacoesFiltradas.length / PG));
+  const transacoesPagina = transacoesFiltradas.slice(paginaAtual * PG, (paginaAtual + 1) * PG);
+
+  // ── Handlers ──
+
+  const handleBuscar = async () => {
+    if (!dataInicio || !dataFim) return;
+    setBuscando(true);
+    setResultado(null);
+    setMatches([]);
+    setSelectedIds(new Set());
+    setRemovidosMensagem(null);
+    setErroMsg(null);
+    setPaginaAtual(0);
+    try {
+      const r = await buscarFn({ data: { dataInicio, dataFim } });
+      setResultado(r);
+    } catch (e) {
+      setErroMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBuscando(false);
+    }
+  };
+
+  const handleComparar = async () => {
+    if (!resultado) return;
+    // Pega CPFs únicos dos boletos PAGOS (succeeded)
+    const cpfsPagos = [
+      ...new Set(
+        resultado.transacoes
+          .filter((t) => t.status === "succeeded" && t.cpf)
+          .map((t) => t.cpf as string),
+      ),
+    ];
+    if (cpfsPagos.length === 0) {
+      setErroMsg("Nenhum boleto pago com CPF identificado nas transações buscadas.");
+      return;
+    }
+    setComparando(true);
+    setErroMsg(null);
+    try {
+      const r = await compararFn({ data: { cpfs: cpfsPagos } });
+      // Enriquece cada débito com dados do PI correspondente
+      const enriched: DebitoMatch[] = (r.debitos ?? []).map((d: any) => {
+        const cpfNorm = d.cpf.replace(/\D/g, "").padStart(11, "0");
+        // pega o PI mais recente (succeeded) desse CPF
+        const pi = resultado.transacoes
+          .filter((t) => t.status === "succeeded" && t.cpf === cpfNorm)
+          .sort((a, b) => b.criado_em.localeCompare(a.criado_em))[0];
+        return {
+          ...d,
+          pi_status: pi?.status,
+          pi_valor: pi?.valor,
+          pi_data: pi?.criado_em,
+          pi_conta: pi?.conta_nome,
+        };
+      });
+      setMatches(enriched);
+      setSelectedIds(new Set(enriched.map((d) => d.id)));
+    } finally {
+      setComparando(false);
+    }
+  };
+
+  const handleRemover = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Remover ${selectedIds.size} débito(s) da base de dados? Esses são devedores que já pagaram na Stripe. Esta ação não pode ser desfeita.`)) return;
+    setRemovendo(true);
+    setErroMsg(null);
+    try {
+      const r = await removerFn({ data: { ids: [...selectedIds] } });
+      setRemovidosMensagem(`✓ ${(r as any).removidos} débito(s) removido(s) com sucesso.`);
+      setMatches((prev) => prev.filter((d) => !selectedIds.has(d.id)));
+      setSelectedIds(new Set());
+    } catch (e) {
+      setErroMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRemovendo(false);
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedIds(next);
+  };
+  const allMatchesSelected = matches.length > 0 && matches.every((d) => selectedIds.has(d.id));
+  const toggleAllMatches = () => {
+    if (allMatchesSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(matches.map((d) => d.id)));
+  };
+
+  const statusLabel = (s: string) => {
+    if (s === "succeeded") return { label: "✓ Pago", cls: "bg-emerald-100 text-emerald-800" };
+    if (s === "requires_action") return { label: "Aguardando", cls: "bg-amber-100 text-amber-800" };
+    if (s === "canceled") return { label: "Expirado", cls: "bg-red-100 text-red-700" };
+    return { label: s, cls: "bg-secondary text-muted-foreground" };
+  };
+
+  const fmtCPF = (cpf: string | null) => {
+    if (!cpf) return "—";
+    const d = cpf.padStart(11, "0");
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  return (
+    <section className="space-y-8">
+      {/* Cabeçalho */}
+      <div>
+        <h2 className="font-serif text-2xl font-semibold text-foreground">
+          🔍 Verificador de pagamentos
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Busca todas as transações Stripe por período, identifica quem pagou e permite remover esses devedores da base de débitos.
+        </p>
+      </div>
+
+      {/* ── BLOCO 1: Seleção de período ── */}
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="mb-4 text-sm font-semibold text-foreground">1. Selecione o período</h3>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">Data inicial</label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted-foreground">Data final</label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
+            />
+          </div>
+          <button
+            onClick={handleBuscar}
+            disabled={buscando || !dataInicio || !dataFim}
+            className="h-10 rounded-lg bg-crm-green px-6 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {buscando ? (
+              <span className="flex items-center gap-2">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Buscando em todas as contas…
+              </span>
+            ) : (
+              "Buscar transações"
+            )}
+          </button>
+          {buscando && (
+            <p className="text-xs text-muted-foreground">
+              Isso pode levar alguns segundos dependendo do volume de boletos e número de contas.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {erroMsg && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {erroMsg}
+        </div>
+      )}
+
+      {/* ── BLOCO 2: Resultados ── */}
+      {resultado && (
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">2. Transações encontradas</h3>
+              <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <span className="rounded-full bg-secondary px-3 py-1">
+                  <strong className="text-foreground">{resultado.total}</strong> total
+                </span>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">
+                  <strong>{resultado.pagos}</strong> pagos
+                </span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">
+                  <strong>{resultado.pendentes}</strong> aguardando
+                </span>
+                <span className="rounded-full bg-red-100 px-3 py-1 text-red-700">
+                  <strong>{resultado.total - resultado.pagos - resultado.pendentes}</strong> expirados/outros
+                </span>
+              </div>
+              {resultado.erros.length > 0 && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs text-red-600 underline">
+                    {resultado.erros.length} conta(s) com erro
+                  </summary>
+                  <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                    {resultado.erros.map((e, i) => (
+                      <li key={i}><strong>{e.conta}</strong>: {e.erro}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </div>
+            <button
+              onClick={handleComparar}
+              disabled={comparando || resultado.pagos === 0}
+              className="h-10 rounded-lg bg-crm-green px-5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              {comparando ? (
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Comparando…
+                </span>
+              ) : (
+                `Comparar ${resultado.pagos} pagos com base de débitos →`
+              )}
+            </button>
+          </div>
+
+          {/* Filtros da tabela */}
+          <div className="mt-4 flex flex-wrap gap-3">
+            <input
+              type="search"
+              value={buscaLocal}
+              onChange={(e) => { setBuscaLocal(e.target.value); setPaginaAtual(0); }}
+              placeholder="Buscar por nome, CPF ou descrição…"
+              className="h-9 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
+            />
+            <div className="flex items-center gap-1 rounded-lg border border-border bg-background p-1 text-xs">
+              {(["todos", "succeeded", "requires_action", "canceled"] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => { setFiltroStatus(s); setPaginaAtual(0); }}
+                  className={`rounded-md px-3 py-1.5 font-medium transition ${filtroStatus === s ? "bg-crm-green text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+                >
+                  {s === "todos" ? "Todos" : s === "succeeded" ? "✓ Pagos" : s === "requires_action" ? "Aguardando" : "Expirados"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tabela */}
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-secondary/40">
+                <tr>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor</th>
+                  <th className="hidden px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Conta</th>
+                  <th className="hidden px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">Data</th>
+                  <th className="hidden px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">No nosso banco?</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {transacoesPagina.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
+                      Nenhuma transação nesse filtro.
+                    </td>
+                  </tr>
+                ) : (
+                  transacoesPagina.map((t) => {
+                    const st = statusLabel(t.status);
+                    const nome = t.boleto_nome ?? t.nome_stripe ?? "—";
+                    return (
+                      <tr key={t.pi_id} className="hover:bg-accent/30 transition">
+                        <td className="px-3 py-2">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${st.cls}`}>
+                            {st.label}
+                          </span>
+                        </td>
+                        <td className="max-w-[180px] truncate px-3 py-2 font-medium text-foreground">{nome}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{fmtCPF(t.cpf)}</td>
+                        <td className="px-3 py-2 text-right font-semibold text-foreground">{fmtBRL(t.valor)}</td>
+                        <td className="hidden px-3 py-2 text-xs text-muted-foreground md:table-cell">{t.conta_nome}</td>
+                        <td className="hidden px-3 py-2 text-xs text-muted-foreground lg:table-cell">
+                          {new Date(t.criado_em).toLocaleDateString("pt-BR")}
+                        </td>
+                        <td className="hidden px-3 py-2 lg:table-cell">
+                          {t.boleto_id ? (
+                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
+                              CRM {t.boleto_crm}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Paginação da tabela de resultados */}
+          {transacoesFiltradas.length > PG && (
+            <div className="mt-3 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {paginaAtual * PG + 1}–{Math.min((paginaAtual + 1) * PG, transacoesFiltradas.length)} de {transacoesFiltradas.length}
+              </p>
+              <div className="flex gap-1">
+                <button onClick={() => setPaginaAtual((p) => Math.max(0, p - 1))} disabled={paginaAtual === 0}
+                  className="h-7 w-7 rounded border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40">‹</button>
+                <button onClick={() => setPaginaAtual((p) => Math.min(totalPgs - 1, p + 1))} disabled={paginaAtual >= totalPgs - 1}
+                  className="h-7 w-7 rounded border border-border text-xs text-muted-foreground hover:bg-accent disabled:opacity-40">›</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── BLOCO 3: Débitos encontrados (comparação) ── */}
+      {matches.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                3. Devedores que já pagaram na Stripe
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {matches.length} devedor(es) encontrado(s) na base de débitos cujo CPF consta em boleto pago.
+                Revise e selecione quais remover.
+              </p>
+            </div>
+            <button
+              onClick={handleRemover}
+              disabled={removendo || selectedIds.size === 0}
+              className="h-10 rounded-lg bg-red-600 px-5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {removendo ? "Removendo…" : `Remover ${selectedIds.size} selecionado(s) da base`}
+            </button>
+          </div>
+
+          {removidosMensagem && (
+            <p className="mt-3 rounded-lg bg-emerald-100 px-4 py-2 text-sm font-semibold text-emerald-800">
+              {removidosMensagem}
+            </p>
+          )}
+
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-secondary/40">
+                <tr>
+                  <th className="w-10 px-3 py-2.5">
+                    <input type="checkbox" checked={allMatchesSelected} onChange={toggleAllMatches}
+                      className="h-4 w-4 cursor-pointer accent-crm-green" />
+                  </th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome (base débitos)</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF</th>
+                  <th className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CRM</th>
+                  <th className="px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Débito</th>
+                  <th className="hidden px-3 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Pago na Stripe</th>
+                  <th className="hidden px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">Data pagamento</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {matches.map((d) => (
+                  <tr
+                    key={d.id}
+                    onClick={() => toggleSelect(d.id)}
+                    className={`cursor-pointer transition hover:bg-accent/40 ${selectedIds.has(d.id) ? "bg-red-50" : ""}`}
+                  >
+                    <td className="px-3 py-2.5">
+                      <input type="checkbox" checked={selectedIds.has(d.id)} onChange={() => toggleSelect(d.id)}
+                        onClick={(e) => e.stopPropagation()} className="h-4 w-4 cursor-pointer accent-crm-green" />
+                    </td>
+                    <td className="max-w-[180px] truncate px-3 py-2.5 font-medium text-foreground">{d.nome}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{fmtCPF(d.cpf)}</td>
+                    <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{d.crm}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-foreground">{fmtBRL(Number(d.valor))}</td>
+                    <td className="hidden px-3 py-2.5 text-right md:table-cell">
+                      {d.pi_valor != null ? (
+                        <span className="font-semibold text-emerald-700">{fmtBRL(d.pi_valor)}</span>
+                      ) : "—"}
+                    </td>
+                    <td className="hidden px-3 py-2.5 text-xs text-muted-foreground md:table-cell">
+                      {d.pi_data ? new Date(d.pi_data).toLocaleString("pt-BR") : "—"}
+                      {d.pi_conta && <span className="ml-1 text-[10px] opacity-60">({d.pi_conta})</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Estado vazio antes de buscar */}
+      {!resultado && !buscando && (
+        <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+          Selecione um período acima e clique em <strong>Buscar transações</strong> para começar.
         </div>
       )}
     </section>
