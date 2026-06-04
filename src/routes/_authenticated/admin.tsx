@@ -1845,29 +1845,34 @@ function HistoricoSection() {
 
   const handleComparar = async () => {
     if (!resultado) return;
-    // Pega CPFs únicos dos boletos PAGOS (succeeded)
-    const cpfsPagos = [
+    // Pega CPFs únicos dos boletos PAGOS (succeeded) E EXPIRADOS (canceled)
+    const cpfsParaComparar = [
       ...new Set(
         resultado.transacoes
-          .filter((t) => t.status === "succeeded" && t.cpf)
+          .filter((t) => (t.status === "succeeded" || t.status === "canceled") && t.cpf)
           .map((t) => t.cpf as string),
       ),
     ];
-    if (cpfsPagos.length === 0) {
-      setErroMsg("Nenhum boleto pago com CPF identificado nas transações buscadas.");
+    if (cpfsParaComparar.length === 0) {
+      setErroMsg("Nenhum boleto pago ou expirado com CPF identificado nas transações buscadas.");
       return;
     }
     setComparando(true);
     setErroMsg(null);
     try {
-      const r = await compararFn({ data: { cpfs: cpfsPagos } });
+      const r = await compararFn({ data: { cpfs: cpfsParaComparar } });
       // Enriquece cada débito com dados do PI correspondente
+      // Prioridade: succeeded > canceled (mais recente)
       const enriched: DebitoMatch[] = (r.debitos ?? []).map((d: any) => {
         const cpfNorm = d.cpf.replace(/\D/g, "").padStart(11, "0");
-        // pega o PI mais recente (succeeded) desse CPF
-        const pi = resultado.transacoes
+        const pisPagos = resultado.transacoes
           .filter((t) => t.status === "succeeded" && t.cpf === cpfNorm)
-          .sort((a, b) => b.criado_em.localeCompare(a.criado_em))[0];
+          .sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+        const pisExpirados = resultado.transacoes
+          .filter((t) => t.status === "canceled" && t.cpf === cpfNorm)
+          .sort((a, b) => b.criado_em.localeCompare(a.criado_em));
+        // Usa o pago se existir, senão o expirado mais recente
+        const pi = pisPagos[0] ?? pisExpirados[0];
         return {
           ...d,
           pi_status: pi?.status,
@@ -2022,7 +2027,7 @@ function HistoricoSection() {
             </div>
             <button
               onClick={handleComparar}
-              disabled={comparando || resultado.pagos === 0}
+              disabled={comparando || (resultado.pagos + (resultado.total - resultado.pagos - resultado.pendentes)) === 0}
               className="h-10 rounded-lg bg-crm-green px-5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               {comparando ? (
@@ -2031,7 +2036,7 @@ function HistoricoSection() {
                   Comparando…
                 </span>
               ) : (
-                `Comparar ${resultado.pagos} pagos com base de débitos →`
+                `Comparar ${resultado.pagos} pagos + ${resultado.total - resultado.pagos - resultado.pendentes} expirados com base de débitos →`
               )}
             </button>
           </div>
