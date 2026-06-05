@@ -21,4 +21,9 @@ export default defineConfig({
       publicDir: ".vercel/output/static",
     },
   },
+  vite: {
+    build: {
+      chunkSizeWarningLimit: 2000,
+    },
+  },
 });
