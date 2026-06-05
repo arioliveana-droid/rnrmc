@@ -97,7 +97,7 @@ async function callStripeUpdatePerson(
   const url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
   const body = new URLSearchParams({ first_name: first, last_name: last }).toString();
   const headers = stripeHeaders(acc);
-  const DEFAULT_PROXY = "http://b7ncchhhmx4l6c3-country-br:6t49gk08huiejg8@rp.scrapegw.com:6060";
+  const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
   const MAX_ATTEMPTS = 3;
   const errors: string[] = [];
