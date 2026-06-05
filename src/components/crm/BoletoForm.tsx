@@ -98,7 +98,7 @@ export function BoletoForm() {
             Emita o boleto da sua anuidade
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
-            Informe seu CRM e CPF para gerar o boleto ou o Pix da anuidade 2026 do CRM-MG.
+            Informe seu CRM e CPF para gerar o boleto da anuidade 2026 do CRM-MG.
           </p>
 
         </div>

@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Informe seu CRM e CPF para emitir o boleto ou Pix da anuidade 2026 do CRM-MG.",
+          "Informe seu CRM e CPF para emitir o boleto da anuidade 2026 do CRM-MG.",
       },
       { property: "og:title", content: "Emitir boleto · Anuidade 2026 CRM-MG" },
       {
