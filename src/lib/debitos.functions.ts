@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const onlyDigits = (s: string) => s.replace(/\D/g, "");
 
@@ -196,13 +197,12 @@ export const listarBoletosGerados = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data, context }) => {
-    const { supabase } = context;
+  .handler(async ({ data }) => {
     const { page, pageSize, search, filtro, dataInicio, dataFim } = data;
     const from = page * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabase
+    let query = supabaseAdmin
       .from("boletos_gerados")
       .select(
         "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado, pago, pago_em",
