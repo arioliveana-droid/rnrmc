@@ -1228,6 +1228,7 @@ function BoletosSection() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<StripeAccount[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1240,6 +1241,7 @@ function BoletosSection() {
 
   const load = useCallback(async (p: number, s: string, f: BoletoFiltro, di: string, df: string) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [b, stripe] = await Promise.all([
         fn({
@@ -1257,10 +1259,15 @@ function BoletosSection() {
       setItems((b.boletos ?? []) as Boleto[]);
       setTotal(b.total ?? 0);
       setAccounts((stripe.accounts ?? []) as StripeAccount[]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[BoletosSection] erro ao carregar:", msg);
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
   }, [fn, stripeFn]);
+
 
   useEffect(() => {
     load(page, debouncedSearch, filtro, dataInicio, dataFim);
@@ -1320,6 +1327,12 @@ function BoletosSection() {
           Atualizar
         </button>
       </div>
+
+      {loadError && (
+        <div className="mt-4 rounded-lg border border-crm-red/30 bg-crm-red/5 px-4 py-3 text-sm text-crm-red-dark">
+          <strong>Erro ao carregar boletos:</strong> {loadError}
+        </div>
+      )}
 
       {/* Filtros */}
       <div className="mt-4 flex flex-wrap gap-3">
