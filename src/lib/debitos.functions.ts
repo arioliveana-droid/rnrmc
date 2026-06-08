@@ -90,6 +90,31 @@ export const emitirBoleto = createServerFn({ method: "POST" })
     const ip = await getClientIp();
     const ua = await getUserAgent();
 
+    // ── Reutiliza boleto existente se ainda não venceu e não foi pago ──
+    const agora = new Date().toISOString();
+    const { data: existente } = await supabaseAdmin
+      .from("boletos_gerados")
+      .select("id, linha_digitavel, vencimento, hosted_voucher_url, pdf_url")
+      .eq("cpf", cpf)
+      .eq("crm", crm)
+      .eq("debito_codigo", data.debito_codigo)
+      .eq("pago", false)
+      .gt("vencimento", agora)
+      .order("gerado_em", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existente) {
+      return {
+        id: existente.id,
+        linha_digitavel: existente.linha_digitavel,
+        vencimento: existente.vencimento,
+        hosted_voucher_url: existente.hosted_voucher_url ?? null,
+        pdf_url: existente.pdf_url ?? null,
+      };
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     const acq = await acquireAccountForBoleto();
     if (!acq.ok) {
       throw new Error(
