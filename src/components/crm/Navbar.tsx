@@ -15,9 +15,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3 md:gap-4">
-          <div className="flex items-center rounded-md bg-[#1a3a5c] px-2 py-1">
-            <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-8 w-auto md:h-10" width={120} height={40} />
-          </div>
+          <img src="/crm-mg-logo.png" alt="CRM-MG" className="h-8 w-auto md:h-10" width={120} height={40} />
           <div className="hidden h-6 w-px bg-border md:block" />
           <span className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground md:inline">
             Anuidade 2026
