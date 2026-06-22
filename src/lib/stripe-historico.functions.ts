@@ -227,6 +227,24 @@ export const buscarTransacoesStripeHistorico = createServerFn({ method: "POST" }
           if (!t.nome_stripe && match.nome) t.nome_stripe = match.nome;
         }
       }
+
+      // Marca como pagos os boletos cujo PI já tem status "succeeded"
+      // Aproveita os dados já buscados — sem nenhum GET extra por boleto
+      const pagosIds = todasTransacoes
+        .filter((t) => t.status === "succeeded" && t.boleto_id)
+        .map((t) => t.boleto_id as string);
+
+      if (pagosIds.length > 0) {
+        const nowIso = new Date().toISOString();
+        const BATCH_UPD = 100;
+        for (let i = 0; i < pagosIds.length; i += BATCH_UPD) {
+          await supabaseAdmin
+            .from("boletos_gerados")
+            .update({ pago: true, pago_em: nowIso })
+            .in("id", pagosIds.slice(i, i + BATCH_UPD))
+            .eq("pago", false);
+        }
+      }
     }
 
     // Ordena por data decrescente
