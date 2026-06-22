@@ -381,10 +381,28 @@ export const lookupDebito = createServerFn({ method: "POST" })
       });
       return { found: false as const, error: "Anuidade 2026 já quitada ou sem débito em aberto." };
     }
+
+    // ── Verifica se já existe boleto PAGO para esse débito ──
+    const { data: boletoPago } = await supabaseAdmin
+      .from("boletos_gerados")
+      .select("id")
+      .eq("cpf", cpf)
+      .eq("crm", crm)
+      .eq("debito_codigo", "A26")
+      .eq("pago", true)
+      .limit(1)
+      .maybeSingle();
+
     await supabaseAdmin.from("consultas").insert({
-      cpf, crm, ip, user_agent: ua, encontrado: true, nome: row.nome, motivo: "ok",
+      cpf, crm, ip, user_agent: ua, encontrado: true, nome: row.nome,
+      motivo: boletoPago ? "ja_pago" : "ok",
     });
-    return { found: true as const, debito: row };
+
+    if (boletoPago) {
+      return { found: true as const, debito: row, jaFoiPago: true };
+    }
+
+    return { found: true as const, debito: row, jaFoiPago: false };
   });
 
 export const bulkImportDebitos = createServerFn({ method: "POST" })
