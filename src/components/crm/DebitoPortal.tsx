@@ -116,7 +116,6 @@ export function DebitoPortal({
             <strong>O que fazer agora?</strong>
             <ul className="mt-2 space-y-1 text-left list-disc list-inside">
               <li>Aguarde alguns minutos e tente novamente.</li>
-              <li>Se o problema persistir, entre em contato com o CRM-MG.</li>
             </ul>
           </div>
           <button
