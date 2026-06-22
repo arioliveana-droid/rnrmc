@@ -1257,10 +1257,11 @@ function RepassesSection() {
   );
 
   const statusLabel = (s: string) => {
-    if (s === "paid") return { label: "✓ Pago", cls: "bg-emerald-100 text-emerald-800" };
-    if (s === "pending") return { label: "Pendente", cls: "bg-amber-100 text-amber-800" };
-    if (s === "failed") return { label: "Falhou", cls: "bg-red-100 text-red-700" };
-    if (s === "canceled") return { label: "Cancelado", cls: "bg-gray-100 text-gray-600" };
+    if (s === "paid")       return { label: "✓ Pago",      cls: "bg-emerald-100 text-emerald-800" };
+    if (s === "in_transit") return { label: "⇢ Em trânsito", cls: "bg-blue-100 text-blue-800" };
+    if (s === "pending")    return { label: "⏱ Agendado",  cls: "bg-amber-100 text-amber-800" };
+    if (s === "failed")     return { label: "✕ Falhou",    cls: "bg-red-100 text-red-700" };
+    if (s === "canceled")   return { label: "Cancelado",   cls: "bg-gray-100 text-gray-600" };
     return { label: s, cls: "bg-secondary text-muted-foreground" };
   };
 
