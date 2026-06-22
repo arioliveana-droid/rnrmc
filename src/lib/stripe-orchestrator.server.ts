@@ -236,57 +236,78 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<number> {
-  // Busca boletos não pagos desta conta que têm payment_intent registrado
+  // 1. Pega os boletos pendentes desta conta no nosso banco
   const { data: pendentes } = await supabaseAdmin
     .from("boletos_gerados")
     .select("id, stripe_payment_intent_id")
     .eq("stripe_account_id", acc.id)
     .eq("pago", false)
     .not("stripe_payment_intent_id", "is", null)
-    .limit(50);
+    .limit(100);
 
   if (!pendentes || pendentes.length === 0) return 0;
 
+  // Monta set de PI IDs que queremos checar
+  const pendingPiIds = new Map<string, string>(
+    pendentes.map((b) => [b.stripe_payment_intent_id as string, b.id]),
+  );
+
   const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
+  const headers = {
+    Authorization: `Bearer ${acc.token}`,
+    "Stripe-Version": "2023-10-16",
+  };
 
-  let pagos = 0;
-  const nowIso = new Date().toISOString();
+  // 2. Busca lista bulk de payment_intents (1 chamada por página, máx 10 páginas)
+  //    e filtra localmente pelos nossos PI IDs — sem GET individual por boleto
+  const succeededBoletoIds: string[] = [];
+  let startingAfter: string | null = null;
+  const MAX_PAGES = 10;
 
-  for (const boleto of pendentes) {
-    const piId = boleto.stripe_payment_intent_id as string;
+  for (let page = 0; page < MAX_PAGES && pendingPiIds.size > 0; page++) {
+    const params = new URLSearchParams({ limit: "100" });
+    if (startingAfter) params.set("starting_after", startingAfter);
+    const url = `https://api.stripe.com/v1/payment_intents?${params}`;
+
     try {
-      const url = `https://api.stripe.com/v1/payment_intents/${piId}`;
-      const headers = {
-        Authorization: `Bearer ${acc.token}`,
-        "Stripe-Version": "2023-10-16",
-      };
-
-      let piJson: { status?: string } | null = null;
-
+      let listJson: { data: any[]; has_more: boolean } | null = null;
       if (proxy) {
         const r = await proxyFetch(url, { method: "GET", headers }, proxy);
-        if (r.status === 200) piJson = JSON.parse(r.text) as { status?: string };
+        if (r.status === 200) listJson = JSON.parse(r.text);
       } else {
         const res = await fetch(url, { headers });
-        if (res.ok) piJson = await res.json() as { status?: string };
+        if (res.ok) listJson = await res.json();
+      }
+      if (!listJson) break;
+
+      for (const pi of listJson.data) {
+        const boletoId = pendingPiIds.get(pi.id);
+        if (boletoId && pi.status === "succeeded") {
+          succeededBoletoIds.push(boletoId);
+          pendingPiIds.delete(pi.id); // já encontrou, remove do set
+        }
       }
 
-      if (piJson?.status === "succeeded") {
-        const { error } = await supabaseAdmin
-          .from("boletos_gerados")
-          .update({ pago: true, pago_em: nowIso })
-          .eq("id", boleto.id)
-          .eq("pago", false);
-
-        if (!error) pagos++;
-      }
+      if (!listJson.has_more) break;
+      startingAfter = listJson.data[listJson.data.length - 1]?.id ?? null;
+      if (!startingAfter) break;
     } catch {
-      // ignora erros de rede individuais — próximo poll tenta de novo
+      break;
     }
   }
 
-  return pagos;
+  if (succeededBoletoIds.length === 0) return 0;
+
+  // 3. Atualiza em batch no banco — 1 query só
+  const nowIso = new Date().toISOString();
+  const { error } = await supabaseAdmin
+    .from("boletos_gerados")
+    .update({ pago: true, pago_em: nowIso })
+    .in("id", succeededBoletoIds)
+    .eq("pago", false);
+
+  return error ? 0 : succeededBoletoIds.length;
 }
 
 export async function pollAllPaymentStatuses(): Promise<{ pagos: number; contas: number }> {
