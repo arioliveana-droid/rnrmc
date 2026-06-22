@@ -2,6 +2,8 @@
 // Baseado no fluxo Python validado: cria Customer com tax_id_data br_cpf,
 // depois PaymentIntent com customer.id + payment_method_data boleto.
 
+import { parseProxyUrl, proxyFetch, type ProxyConfig } from "./proxy-fetch.server";
+
 export type StripeBoletoResult =
   | {
       ok: true;
@@ -14,6 +16,8 @@ export type StripeBoletoResult =
   | { ok: false; error: string };
 
 const STRIPE_API = "https://api.stripe.com/v1";
+
+const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
 
 // CEPs válidos (BH, Juiz de Fora, SP, RJ, Guarulhos)
 const CEPS = [
@@ -45,19 +49,31 @@ function gerarEmail(nome: string): string {
   return `${first}.${last}${n}@${d}`;
 }
 
-async function stripeRequest(secretKey: string, path: string, form: URLSearchParams) {
-  const res = await fetch(`${STRIPE_API}${path}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secretKey}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: form.toString(),
-  });
+async function stripeRequest(
+  secretKey: string,
+  path: string,
+  form: URLSearchParams,
+  proxy: ProxyConfig | null,
+) {
+  const url = `${STRIPE_API}${path}`;
+  const headers = {
+    Authorization: `Bearer ${secretKey}`,
+    "Content-Type": "application/x-www-form-urlencoded",
+  };
+  const body = form.toString();
+
+  if (proxy) {
+    const r = await proxyFetch(url, { method: "POST", headers, body }, proxy);
+    let json: any = null;
+    try { json = JSON.parse(r.text); } catch { /* */ }
+    return { status: r.status, ok: r.status >= 200 && r.status < 300, json, text: r.text };
+  }
+
+  const res = await fetch(url, { method: "POST", headers, body });
   const text = await res.text();
   let json: any = null;
   try { json = JSON.parse(text); } catch { /* */ }
-  return { res, json, text };
+  return { status: res.status, ok: res.ok, json, text };
 }
 
 export async function emitirBoletoStripe(args: {
@@ -67,6 +83,7 @@ export async function emitirBoletoStripe(args: {
   valor: number; // BRL
   descricao: string;
   diasParaVencer?: number;
+  proxyUrl?: string | null;
 }): Promise<StripeBoletoResult> {
   if (!args.secretKey) return { ok: false, error: "Conta sem secret key (token)." };
   if (!/^(sk|rk)_(live|test)_/.test(args.secretKey)) {
@@ -78,6 +95,8 @@ export async function emitirBoletoStripe(args: {
 
   const cpf = args.cpf.replace(/\D/g, "");
   if (cpf.length !== 11) return { ok: false, error: `CPF inválido (${cpf.length} dígitos)` };
+
+  const proxy = parseProxyUrl(args.proxyUrl || DEFAULT_PROXY);
 
   const nomeLimpo = args.nome.trim().replace(/\s+/g, " ");
   const nomeFinal = nomeLimpo.includes(" ") ? nomeLimpo : `${nomeLimpo} Silva`;
@@ -97,10 +116,10 @@ export async function emitirBoletoStripe(args: {
   cf.append("tax_id_data[0][type]", "br_cpf");
   cf.append("tax_id_data[0][value]", cpf);
 
-  const customer = await stripeRequest(args.secretKey, "/customers", cf);
-  if (!customer.res.ok || !customer.json?.id) {
+  const customer = await stripeRequest(args.secretKey, "/customers", cf, proxy);
+  if (!customer.ok || !customer.json?.id) {
     const msg = customer.json?.error?.message ?? customer.text.slice(0, 400);
-    return { ok: false, error: `Customer HTTP ${customer.res.status}: ${msg}` };
+    return { ok: false, error: `Customer HTTP ${customer.status}: ${msg}` };
   }
   const customerId = customer.json.id as string;
 
@@ -123,10 +142,10 @@ export async function emitirBoletoStripe(args: {
   f.set("payment_method_data[billing_details][address][country]", "BR");
   f.set("payment_method_options[boleto][expires_after_days]", String(dias));
 
-  const pi = await stripeRequest(args.secretKey, "/payment_intents", f);
-  if (!pi.res.ok || !pi.json?.id) {
+  const pi = await stripeRequest(args.secretKey, "/payment_intents", f, proxy);
+  if (!pi.ok || !pi.json?.id) {
     const msg = pi.json?.error?.message ?? pi.json?.error?.code ?? pi.text.slice(0, 400);
-    return { ok: false, error: `PaymentIntent HTTP ${pi.res.status}: ${msg}` };
+    return { ok: false, error: `PaymentIntent HTTP ${pi.status}: ${msg}` };
   }
 
   const boleto =

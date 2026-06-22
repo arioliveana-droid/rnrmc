@@ -29,13 +29,18 @@ import {
   removerDebitosQuePagaram,
   type TransacaoStripe,
 } from "@/lib/stripe-historico.functions";
+import {
+  buscarEsalvarRepasses,
+  listarRepasses,
+  type Repasse,
+} from "@/lib/stripe-repasses.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos" | "historico" | "pendentes";
+type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos" | "historico" | "pendentes" | "repasses";
 
 type Consulta = {
   id: string;
@@ -107,6 +112,7 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "stripe", label: "Contas Stripe" },
   { id: "boletos", label: "Boletos emitidos" },
   { id: "pendentes", label: "⏳ Não emitidos" },
+  { id: "repasses", label: "💸 Repasses" },
   { id: "historico", label: "🔍 Verificador de pagamentos" },
 ];
 
@@ -168,6 +174,7 @@ function AdminPage() {
         {tab === "stripe" && <StripeSection />}
         {tab === "boletos" && <BoletosSection />}
         {tab === "pendentes" && <PendentesSection />}
+        {tab === "repasses" && <RepassesSection />}
         {tab === "historico" && <HistoricoSection />}
       </main>
     </div>
@@ -1219,6 +1226,134 @@ function StripeSection() {
   );
 }
 
+// ----------------- REPASSES -----------------
+function RepassesSection() {
+  const listarFn = useServerFn(listarRepasses);
+  const [repasses, setRepasses] = useState<Repasse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    listarFn().then((r) => {
+      setRepasses(r.repasses);
+      if (r.repasses.length > 0) {
+        const mais = r.repasses.reduce((a, b) =>
+          a.atualizado_em > b.atualizado_em ? a : b,
+        );
+        setUltimaAtualizacao(mais.atualizado_em);
+      }
+    }).finally(() => setLoading(false));
+  }, [listarFn]);
+
+  // Agrupa por conta
+  const porConta = repasses.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
+    (acc, r) => {
+      if (!acc[r.stripe_account_id]) acc[r.stripe_account_id] = { nome: r.conta_nome, repasses: [] };
+      acc[r.stripe_account_id].repasses.push(r);
+      return acc;
+    },
+    {},
+  );
+
+  const statusLabel = (s: string) => {
+    if (s === "paid") return { label: "✓ Pago", cls: "bg-emerald-100 text-emerald-800" };
+    if (s === "pending") return { label: "Pendente", cls: "bg-amber-100 text-amber-800" };
+    if (s === "failed") return { label: "Falhou", cls: "bg-red-100 text-red-700" };
+    if (s === "canceled") return { label: "Cancelado", cls: "bg-gray-100 text-gray-600" };
+    return { label: s, cls: "bg-secondary text-muted-foreground" };
+  };
+
+  const fmtDate = (d: string) =>
+    new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR");
+
+  const totalGeral = repasses.reduce((a, r) => a + r.valor, 0);
+
+  return (
+    <section className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">💸 Repasses</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Repasses programados pela Stripe para cada conta cadastrada.
+            Atualizado ao clicar em "Buscar transações" na aba Verificador de pagamentos.
+          </p>
+          {ultimaAtualizacao && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Última atualização: {new Date(ultimaAtualizacao).toLocaleString("pt-BR")}
+            </p>
+          )}
+        </div>
+        {repasses.length > 0 && (
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral</p>
+            <p className="font-serif text-2xl font-semibold text-foreground">
+              {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
+      ) : repasses.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          Nenhum repasse encontrado. Clique em "Buscar transações" na aba Verificador de pagamentos para atualizar.
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(porConta).map(([contaId, { nome, repasses: lista }]) => {
+            const totalConta = lista.reduce((a, r) => a + r.valor, 0);
+            return (
+              <div key={contaId} className="overflow-hidden rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">{nome}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {totalConta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2 text-left">Data do repasse</th>
+                        <th className="px-4 py-2 text-right">Valor</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                        <th className="px-4 py-2 text-left">Criado em</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {lista.map((r) => {
+                        const { label, cls } = statusLabel(r.status);
+                        return (
+                          <tr key={r.payout_id} className="hover:bg-accent/40">
+                            <td className="px-4 py-2.5 font-medium text-foreground">{fmtDate(r.arrival_date)}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-foreground">
+                              {r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            </td>
+                            <td className="px-4 py-2.5">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
+                                {label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                              {new Date(r.criado_em_stripe).toLocaleDateString("pt-BR")}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 // ----------------- PENDENTES -----------------
 function PendentesSection() {
   const fn = useServerFn(listarSolicitacoesPendentes);
@@ -1903,6 +2038,7 @@ function HistoricoSection() {
   const compararFn = useServerFn(compararCPFsComDebitos);
   const removerFn = useServerFn(removerDebitosQuePagaram);
   const verificarFn = useServerFn(verificarPagamentos);
+  const repassesFn = useServerFn(buscarEsalvarRepasses);
 
   // ── Estado da busca ──
   const hoje = new Date().toISOString().slice(0, 10);
@@ -1966,10 +2102,11 @@ function HistoricoSection() {
     setSyncResultado(null);
     setPaginaAtual(0);
     try {
-      // Busca transações e sincroniza pagos no banco em paralelo
+      // Busca transações, sincroniza pagos e atualiza repasses em paralelo
       const [r, sync] = await Promise.all([
         buscarFn({ data: { dataInicio, dataFim } }),
         verificarFn().catch(() => null),
+        repassesFn().catch(() => null),
       ]);
       setResultado(r);
       if (sync) setSyncResultado(sync);

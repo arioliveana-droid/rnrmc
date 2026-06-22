@@ -147,6 +147,7 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       valor: data.valor,
       descricao: stripeDesc,
       diasParaVencer: 1,
+      proxyUrl: stripeAccount.proxy_url ?? null,
     });
 
     let linha: string;

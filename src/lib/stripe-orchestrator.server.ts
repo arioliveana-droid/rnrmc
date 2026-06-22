@@ -293,7 +293,6 @@ export async function pollAllPaymentStatuses(): Promise<{ pagos: number; contas:
   const { data: contas } = await supabaseAdmin
     .from("stripe_accounts")
     .select(SELECT_COLS)
-    .eq("ativo", true)
     .gt("total_boletos", 0);
 
   if (!contas || contas.length === 0) return { pagos: 0, contas: 0 };

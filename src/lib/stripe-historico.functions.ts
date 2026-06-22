@@ -4,6 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos
@@ -31,10 +32,13 @@ export type TransacaoStripe = {
 // Helper: pagina todos os PaymentIntents de uma conta Stripe no período
 // ─────────────────────────────────────────────────────────────────────────────
 
+const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+
 async function fetchAllPIsForAccount(
   token: string,
   tsInicio: number,
   tsFim: number,
+  proxyUrl?: string | null,
 ): Promise<{ raw: any[]; error?: string }> {
   const results: any[] = [];
   let startingAfter: string | null = null;
@@ -48,28 +52,37 @@ async function fetchAllPIsForAccount(
       "expand[]": "data.payment_method",
     });
     if (startingAfter) params.set("starting_after", startingAfter);
+    const url = `https://api.stripe.com/v1/payment_intents?${params}`;
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      "Stripe-Version": "2023-10-16",
+    };
+    const proxy = parseProxyUrl(proxyUrl || DEFAULT_PROXY);
 
     try {
-      const res = await fetch(`https://api.stripe.com/v1/payment_intents?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Stripe-Version": "2023-10-16",
-        },
-      });
+      let resStatus: number;
+      let resText: string;
 
-      if (res.status === 429) {
-        // Rate limit — espera 1s e tenta de novo (uma vez)
+      if (proxy) {
+        const r = await proxyFetch(url, { method: "GET", headers }, proxy);
+        resStatus = r.status;
+        resText = r.text;
+      } else {
+        const res = await fetch(url, { headers });
+        resStatus = res.status;
+        resText = await res.text();
+      }
+
+      if (resStatus === 429) {
         await new Promise((r) => setTimeout(r, 1000));
         continue;
       }
 
-      if (!res.ok) {
-        const txt = await res.text();
-        return { raw: results, error: `HTTP ${res.status}: ${txt.slice(0, 200)}` };
+      if (resStatus !== 200) {
+        return { raw: results, error: `HTTP ${resStatus}: ${resText.slice(0, 200)}` };
       }
 
-      const json = await res.json() as { data: any[]; has_more: boolean };
-      // Filtra apenas boletos (o endpoint de listagem não aceita filtro por tipo)
+      const json = JSON.parse(resText) as { data: any[]; has_more: boolean };
       const boletos = json.data.filter((pi: any) =>
         Array.isArray(pi.payment_method_types)
           ? pi.payment_method_types.includes("boleto")
@@ -145,8 +158,7 @@ export const buscarTransacoesStripeHistorico = createServerFn({ method: "POST" }
     // Busca todas as contas ativas
     const { data: contas } = await supabaseAdmin
       .from("stripe_accounts")
-      .select("id, nome, token")
-      .eq("ativo", true)
+      .select("id, nome, token, proxy_url")
       .order("ordem", { ascending: true });
 
     if (!contas || contas.length === 0) {
@@ -162,7 +174,7 @@ export const buscarTransacoesStripeHistorico = createServerFn({ method: "POST" }
       const chunk = contas.slice(i, i + CONCURRENCY);
       const results = await Promise.all(
         chunk.map(async (conta) => {
-          const { raw, error } = await fetchAllPIsForAccount(conta.token, tsInicio, tsFim);
+          const { raw, error } = await fetchAllPIsForAccount(conta.token, tsInicio, tsFim, conta.proxy_url);
           return { conta, raw, error };
         }),
       );
