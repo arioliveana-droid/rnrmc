@@ -53,6 +53,7 @@ export function DebitoPortal({
   const [emitindo, setEmitindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [processando, setProcessando] = useState(false);
+  const [jaFoiPago, setJaFoiPago] = useState(false);
 
   const handleEmitir = async () => {
     setErro(null);
@@ -80,6 +81,8 @@ export function DebitoPortal({
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("PROCESSANDO")) {
         setProcessando(true);
+      } else if (msg.includes("PAGO:")) {
+        setJaFoiPago(true);
       } else {
         setErro(msg.replace(/^Falha ao emitir boleto na Stripe:\s*/i, "") || "Não foi possível emitir o boleto. Tente novamente.");
       }
@@ -87,6 +90,31 @@ export function DebitoPortal({
       setEmitindo(false);
     }
   };
+
+  if (jaFoiPago) {
+    return (
+      <div className="min-h-screen bg-[oklch(0.985_0.008_158)] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+            <svg className="h-10 w-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
+            Pagamento recebido
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            Seu pagamento já foi confirmado pelo nosso sistema.<br />
+            Não é necessário emitir um novo boleto.
+          </p>
+          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+            Caso tenha alguma dúvida sobre sua situação cadastral,
+            entre em contato com o CRM-MG.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (emissao) {
     return (

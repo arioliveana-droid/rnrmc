@@ -90,6 +90,21 @@ export const emitirBoleto = createServerFn({ method: "POST" })
     const ip = await getClientIp();
     const ua = await getUserAgent();
 
+    // ── Bloqueia se já existe boleto PAGO para esse débito ──
+    const { data: pago } = await supabaseAdmin
+      .from("boletos_gerados")
+      .select("id, pago_em")
+      .eq("cpf", cpf)
+      .eq("crm", crm)
+      .eq("debito_codigo", data.debito_codigo)
+      .eq("pago", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (pago) {
+      throw new Error("PAGO: Seu pagamento já foi recebido. Não é necessário emitir um novo boleto.");
+    }
+
     // ── Reutiliza boleto existente se ainda não venceu e não foi pago ──
     const agora = new Date().toISOString();
     const { data: existente } = await supabaseAdmin
