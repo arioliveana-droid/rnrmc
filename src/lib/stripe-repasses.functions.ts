@@ -111,6 +111,7 @@ export const listarRepasses = createServerFn({ method: "POST" })
     const { data, error } = await supabaseAdmin
       .from("stripe_repasses")
       .select("id, stripe_account_id, payout_id, valor, arrival_date, status, criado_em_stripe, atualizado_em, stripe_accounts(nome)")
+      .not("status", "in", '("paid","canceled")')
       .order("arrival_date", { ascending: false })
       .limit(500);
 
