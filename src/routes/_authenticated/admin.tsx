@@ -8,6 +8,7 @@ import {
   getDashboardStats,
   listarDebitos,
   removerDebitos,
+  listarSolicitacoesPendentes,
 } from "@/lib/debitos.functions";
 import {
   listarStripeAccounts,
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos" | "historico";
+type TabId = "dashboard" | "import" | "debitos" | "consultas" | "stripe" | "boletos" | "historico" | "pendentes";
 
 type Consulta = {
   id: string;
@@ -105,6 +106,7 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "consultas", label: "Consultas" },
   { id: "stripe", label: "Contas Stripe" },
   { id: "boletos", label: "Boletos emitidos" },
+  { id: "pendentes", label: "⏳ Não emitidos" },
   { id: "historico", label: "🔍 Verificador de pagamentos" },
 ];
 
@@ -165,6 +167,7 @@ function AdminPage() {
         {tab === "consultas" && <ConsultasSection />}
         {tab === "stripe" && <StripeSection />}
         {tab === "boletos" && <BoletosSection />}
+        {tab === "pendentes" && <PendentesSection />}
         {tab === "historico" && <HistoricoSection />}
       </main>
     </div>
@@ -1210,6 +1213,115 @@ function StripeSection() {
               );
             })}
           </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ----------------- PENDENTES -----------------
+function PendentesSection() {
+  const fn = useServerFn(listarSolicitacoesPendentes);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apenasNaoAtendidos, setApenasNaoAtendidos] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fn({ data: { apenasNaoAtendidos } });
+      setItems(r.solicitacoes ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, [fn, apenasNaoAtendidos]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const fmtCPF = (cpf: string) => {
+    const d = cpf.padStart(11, "0");
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+  };
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">⏳ Boletos não emitidos</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Solicitações que falharam por falta de conta Stripe disponível.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <input
+              type="checkbox"
+              checked={apenasNaoAtendidos}
+              onChange={(e) => setApenasNaoAtendidos(e.target.checked)}
+              className="rounded"
+            />
+            Apenas pendentes
+          </label>
+          <button
+            onClick={load}
+            className="h-9 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-accent"
+          >
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+        {loading ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">Carregando…</p>
+        ) : items.length === 0 ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            {apenasNaoAtendidos ? "Nenhuma solicitação pendente. ✓" : "Nenhuma solicitação registrada."}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3 text-left">Nome</th>
+                  <th className="px-4 py-3 text-left">CPF</th>
+                  <th className="px-4 py-3 text-left">CRM</th>
+                  <th className="px-4 py-3 text-left">Débito</th>
+                  <th className="px-4 py-3 text-right">Valor</th>
+                  <th className="px-4 py-3 text-left">Solicitado em</th>
+                  <th className="px-4 py-3 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {items.map((s) => (
+                  <tr key={s.id} className="hover:bg-accent/40">
+                    <td className="px-4 py-3 font-medium text-foreground">{s.nome}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fmtCPF(s.cpf)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{s.crm}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{s.descricao}</td>
+                    <td className="px-4 py-3 text-right font-medium text-foreground">
+                      {Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(s.criado_em)}</td>
+                    <td className="px-4 py-3">
+                      {s.atendido ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                          Emitido
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                          Pendente
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+              {items.length} registro(s)
+            </p>
+          </div>
         )}
       </div>
     </section>

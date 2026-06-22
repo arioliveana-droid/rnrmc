@@ -117,6 +117,17 @@ export const emitirBoleto = createServerFn({ method: "POST" })
 
     const acq = await acquireAccountForBoleto();
     if (!acq.ok) {
+      // Registra a tentativa frustrada para acompanhamento no admin
+      await supabaseAdmin.from("solicitacoes_pendentes").insert({
+        nome: data.nome,
+        cpf,
+        crm,
+        debito_codigo: data.debito_codigo,
+        descricao: data.descricao,
+        valor: data.valor,
+        ip,
+        user_agent: ua,
+      });
       throw new Error(
         "PROCESSANDO: Estamos com um volume alto de emissões no momento. " +
           "Por favor, tente novamente em algumas horas.",
@@ -198,6 +209,14 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       }
     }
 
+    // Marca solicitações pendentes deste CPF+débito como atendidas
+    await supabaseAdmin
+      .from("solicitacoes_pendentes")
+      .update({ atendido: true, atendido_em: new Date().toISOString() })
+      .eq("cpf", cpf)
+      .eq("debito_codigo", data.debito_codigo)
+      .eq("atendido", false);
+
     return {
       id: row.id,
       linha_digitavel: linha,
@@ -207,6 +226,32 @@ export const emitirBoleto = createServerFn({ method: "POST" })
     };
   });
 
+
+
+export const listarSolicitacoesPendentes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input) =>
+    z.object({
+      apenasNaoAtendidos: z.boolean().default(true),
+    }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const supabaseAdmin = await getAdmin();
+    let query = supabaseAdmin
+      .from("solicitacoes_pendentes")
+      .select("id, nome, cpf, crm, debito_codigo, descricao, valor, ip, criado_em, atendido, atendido_em")
+      .order("criado_em", { ascending: false })
+      .limit(500);
+    if (data.apenasNaoAtendidos) {
+      query = query.eq("atendido", false);
+    }
+    const { data: rows, error } = await query;
+    if (error) {
+      console.error("listarSolicitacoesPendentes", error);
+      return { solicitacoes: [] };
+    }
+    return { solicitacoes: rows ?? [] };
+  });
 
 export const listarBoletosGerados = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
