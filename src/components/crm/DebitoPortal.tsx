@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   ArrowLeft,
   Bell,
+  Clock,
   FileText,
   Loader2,
   Wallet,
@@ -51,6 +52,7 @@ export function DebitoPortal({
   const [emissao, setEmissao] = useState<EmissaoBoleto | null>(null);
   const [emitindo, setEmitindo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [processando, setProcessando] = useState(false);
 
   const handleEmitir = async () => {
     setErro(null);
@@ -77,10 +79,7 @@ export function DebitoPortal({
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes("PROCESSANDO")) {
-        setErro(
-          "Sua emissão está em processamento devido ao alto volume de pedidos. " +
-            "Por favor, tente novamente em algumas horas.",
-        );
+        setProcessando(true);
       } else {
         setErro(msg.replace(/^Falha ao emitir boleto na Stripe:\s*/i, "") || "Não foi possível emitir o boleto. Tente novamente.");
       }
@@ -96,6 +95,39 @@ export function DebitoPortal({
         emissao={emissao}
         onBack={() => setEmissao(null)}
       />
+    );
+  }
+
+  if (processando) {
+    return (
+      <div className="min-h-screen bg-[oklch(0.985_0.008_158)] flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-amber-100">
+            <Clock className="h-10 w-10 text-amber-500" />
+          </div>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">
+            Débito em processamento
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            Estamos finalizando a geração do seu boleto. Assim que estiver
+            pronto, você poderá acessar normalmente por este portal.
+          </p>
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">
+            <strong>O que fazer agora?</strong>
+            <ul className="mt-2 space-y-1 text-left list-disc list-inside">
+              <li>Aguarde alguns minutos e tente novamente.</li>
+              <li>Se o problema persistir, entre em contato com o CRM-MG.</li>
+            </ul>
+          </div>
+          <button
+            onClick={() => setProcessando(false)}
+            className="mt-8 inline-flex items-center gap-2 rounded-xl border border-border bg-background px-6 py-3 text-sm font-medium text-foreground transition hover:bg-secondary"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Tentar novamente
+          </button>
+        </div>
+      </div>
     );
   }
 
