@@ -247,24 +247,32 @@ async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<numbe
 
   if (!pendentes || pendentes.length === 0) return 0;
 
+  const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+  const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
+
   let pagos = 0;
   const nowIso = new Date().toISOString();
 
   for (const boleto of pendentes) {
     const piId = boleto.stripe_payment_intent_id as string;
     try {
-      const res = await fetch(`https://api.stripe.com/v1/payment_intents/${piId}`, {
-        headers: {
-          Authorization: `Bearer ${acc.token}`,
-          "Stripe-Version": "2023-10-16",
-        },
-      });
+      const url = `https://api.stripe.com/v1/payment_intents/${piId}`;
+      const headers = {
+        Authorization: `Bearer ${acc.token}`,
+        "Stripe-Version": "2023-10-16",
+      };
 
-      if (!res.ok) continue;
+      let piJson: { status?: string } | null = null;
 
-      const pi = await res.json() as { status?: string };
+      if (proxy) {
+        const r = await proxyFetch(url, { method: "GET", headers }, proxy);
+        if (r.status === 200) piJson = JSON.parse(r.text) as { status?: string };
+      } else {
+        const res = await fetch(url, { headers });
+        if (res.ok) piJson = await res.json() as { status?: string };
+      }
 
-      if (pi.status === "succeeded") {
+      if (piJson?.status === "succeeded") {
         const { error } = await supabaseAdmin
           .from("boletos_gerados")
           .update({ pago: true, pago_em: nowIso })
