@@ -976,7 +976,7 @@ function StripeSection() {
             </div>
           </div>
 
-
+          <div className="flex justify-end">
             <button
               onClick={handleAdd}
               disabled={saving || !nome.trim() || !token.trim()}
