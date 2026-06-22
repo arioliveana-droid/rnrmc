@@ -244,3 +244,11 @@ export const atualizarStripeAccount = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, error: error.message };
     return { ok: true as const };
   });
+// Verifica status de pagamentos na Stripe e marca como pago no banco.
+// Chamado manualmente pelo botão no painel admin.
+export const verificarPagamentos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { pollAllPaymentStatuses } = await import("./stripe-orchestrator.server");
+    return pollAllPaymentStatuses();
+  });

@@ -20,6 +20,7 @@ import {
   tickOrquestrador,
   atualizarStripeAccount,
   resetarLimitesStripe,
+  verificarPagamentos,
 } from "@/lib/stripe.functions";
 import {
   buscarTransacoesStripeHistorico,
@@ -1789,6 +1790,7 @@ function HistoricoSection() {
   const buscarFn = useServerFn(buscarTransacoesStripeHistorico);
   const compararFn = useServerFn(compararCPFsComDebitos);
   const removerFn = useServerFn(removerDebitosQuePagaram);
+  const verificarFn = useServerFn(verificarPagamentos);
 
   // ── Estado da busca ──
   const hoje = new Date().toISOString().slice(0, 10);
@@ -1811,6 +1813,10 @@ function HistoricoSection() {
   const [removendo, setRemovendo] = useState(false);
   const [removidosMensagem, setRemovidosMensagem] = useState<string | null>(null);
   const [erroMsg, setErroMsg] = useState<string | null>(null);
+
+  // ── Estado do sync de pagamentos ──
+  const [sincronizando, setSincronizando] = useState(false);
+  const [syncResultado, setSyncResultado] = useState<{ pagos: number; contas: number } | null>(null);
 
   // ── Filtro local de status na tabela ──
   const [filtroStatus, setFiltroStatus] = useState<"todos" | "succeeded" | "requires_action" | "canceled">("todos");
@@ -1845,10 +1851,16 @@ function HistoricoSection() {
     setSelectedIds(new Set());
     setRemovidosMensagem(null);
     setErroMsg(null);
+    setSyncResultado(null);
     setPaginaAtual(0);
     try {
-      const r = await buscarFn({ data: { dataInicio, dataFim } });
+      // Busca transações e sincroniza pagos no banco em paralelo
+      const [r, sync] = await Promise.all([
+        buscarFn({ data: { dataInicio, dataFim } }),
+        verificarFn().catch(() => null),
+      ]);
       setResultado(r);
+      if (sync) setSyncResultado(sync);
     } catch (e) {
       setErroMsg(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1952,6 +1964,7 @@ function HistoricoSection() {
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Busca todas as transações Stripe por período, identifica quem pagou e permite remover esses devedores da base de débitos.
+          {" "}A cada busca, os boletos pagos são automaticamente marcados no banco.
         </p>
       </div>
 
@@ -1994,6 +2007,13 @@ function HistoricoSection() {
           {buscando && (
             <p className="text-xs text-muted-foreground">
               Isso pode levar alguns segundos dependendo do volume de boletos e número de contas.
+            </p>
+          )}
+          {syncResultado && !buscando && (
+            <p className="text-xs text-emerald-700 font-medium">
+              {syncResultado.pagos > 0
+                ? `✓ ${syncResultado.pagos} boleto(s) marcado(s) como pago.`
+                : "Nenhum boleto novo pago encontrado."}
             </p>
           )}
         </div>
