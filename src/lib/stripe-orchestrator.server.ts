@@ -439,11 +439,12 @@ export async function acquireAccountForBoleto(): Promise<
     }
 
     const acc = claimed as StripeAccountRow;
+    const limitBoletos = (open as any).limite_boletos_diario ?? DAILY_LIMIT;
     return {
       ok: true,
       account: acc,
-      // Sinaliza pro caller fechar a janela DEPOIS de emitir o 12º boleto.
-      shouldCloseAfter: novoJanela >= WINDOW_MAX_BOLETOS,
+      // Fecha janela se atingiu o máximo por janela (12) OU o limite diário da conta
+      shouldCloseAfter: novoJanela >= WINDOW_MAX_BOLETOS || novoDia >= limitBoletos,
     };
   }
 

@@ -810,6 +810,8 @@ function StripeSection() {
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [limiteBoletosDiario, setLimiteBoletosDiario] = useState(12);
+  const [limiteTrocasDiario, setLimiteTrocasDiario] = useState(2);
 
   const load = useCallback(async () => {
     const r = await list();
@@ -868,6 +870,8 @@ function StripeSection() {
           original_last_name: origLast.trim(),
           replacement_first_name: replFirst.trim(),
           replacement_last_name: replLast.trim(),
+          limite_boletos_diario: limiteBoletosDiario,
+          limite_trocas_diario: limiteTrocasDiario,
         },
       });
       if (!r.ok) {
@@ -882,6 +886,8 @@ function StripeSection() {
         setOrigLast("");
         setReplFirst("");
         setReplLast("");
+        setLimiteBoletosDiario(12);
+        setLimiteTrocasDiario(2);
         await load();
       }
     } finally {
@@ -946,9 +952,31 @@ function StripeSection() {
             </div>
           </div>
 
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Limites diários</div>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Boletos por dia</label>
+                <input
+                  type="number" min={1} max={999}
+                  value={limiteBoletosDiario}
+                  onChange={(e) => setLimiteBoletosDiario(parseInt(e.target.value) || 12)}
+                  className={inputCls + " w-full"}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Trocas de nome por dia</label>
+                <input
+                  type="number" min={1} max={99}
+                  value={limiteTrocasDiario}
+                  onChange={(e) => setLimiteTrocasDiario(parseInt(e.target.value) || 2)}
+                  className={inputCls + " w-full"}
+                />
+              </div>
+            </div>
+          </div>
 
 
-          <div className="flex justify-end">
             <button
               onClick={handleAdd}
               disabled={saving || !nome.trim() || !token.trim()}
