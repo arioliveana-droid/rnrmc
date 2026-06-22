@@ -2279,6 +2279,7 @@ function HistoricoSection() {
             <p className="text-xs text-muted-foreground">
               Isso pode levar alguns segundos dependendo do volume de boletos e número de contas.
             </p>
+          )}
         </div>
       </div>
 
