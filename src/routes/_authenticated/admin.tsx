@@ -1273,7 +1273,7 @@ function RepassesSection() {
     Promise.all([listarFn(), stripeFn()])
       .then(([r, s]) => {
         setRepasses(r.repasses);
-        if (s.contas) setContas(s.contas);
+        if (s.accounts) setContas(s.accounts.map(a => ({ id: a.id, nome: a.nome })));
         if (r.repasses.length > 0) {
           const mais = r.repasses.reduce((a, b) =>
             a.atualizado_em > b.atualizado_em ? a : b,
