@@ -1,6 +1,7 @@
 // SERVER-ONLY. Busca e persiste repasses (payouts) da Stripe por conta.
 
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
 
@@ -46,19 +47,30 @@ async function fetchPayoutsForAccount(
 }
 
 /**
- * Busca payouts de TODAS as contas cadastradas (ativas ou não)
- * via proxy e persiste no banco. Chamado junto com buscarTransacoesStripeHistorico.
+ * Busca payouts das contas especificadas (ou de todas se nenhuma for passada)
+ * via proxy e persiste no banco.
  */
 export const buscarEsalvarRepasses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => {
+  .inputValidator((input) =>
+    z
+      .object({ accountIds: z.array(z.string()).optional() })
+      .default({})
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Todas as contas, inclusive inativas
-    const { data: contas } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("stripe_accounts")
       .select("id, nome, token, proxy_url")
       .order("ordem", { ascending: true });
+
+    if (data.accountIds && data.accountIds.length > 0) {
+      query = query.in("id", data.accountIds);
+    }
+
+    const { data: contas } = await query;
 
     if (!contas || contas.length === 0) return { atualizados: 0, erros: [] };
 

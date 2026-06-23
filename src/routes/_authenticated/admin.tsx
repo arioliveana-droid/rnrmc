@@ -1256,26 +1256,61 @@ function StripeSection() {
 
 // ----------------- REPASSES -----------------
 function RepassesSection() {
-  const listarFn = useServerFn(listarRepasses);
-  const [repasses, setRepasses] = useState<Repasse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<string | null>(null);
+  const listarFn      = useServerFn(listarRepasses);
+  const stripeFn      = useServerFn(listarStripeAccounts);
+  const repassesFn    = useServerFn(buscarEsalvarRepasses);
 
-  useEffect(() => {
+  const [repasses, setRepasses]           = useState<Repasse[]>([]);
+  const [contas,   setContas]             = useState<{ id: string; nome: string }[]>([]);
+  const [selecionadas, setSelecionadas]   = useState<string[]>([]);
+  const [loading,  setLoading]            = useState(true);
+  const [atualizando, setAtualizando]     = useState(false);
+  const [ultimaAtualizacao, setUltima]    = useState<string | null>(null);
+  const [erroMsg, setErroMsg]             = useState<string | null>(null);
+
+  const carregar = useCallback(() => {
     setLoading(true);
-    listarFn().then((r) => {
-      setRepasses(r.repasses);
-      if (r.repasses.length > 0) {
-        const mais = r.repasses.reduce((a, b) =>
-          a.atualizado_em > b.atualizado_em ? a : b,
-        );
-        setUltimaAtualizacao(mais.atualizado_em);
-      }
-    }).finally(() => setLoading(false));
-  }, [listarFn]);
+    Promise.all([listarFn(), stripeFn()])
+      .then(([r, s]) => {
+        setRepasses(r.repasses);
+        if (s.contas) setContas(s.contas);
+        if (r.repasses.length > 0) {
+          const mais = r.repasses.reduce((a, b) =>
+            a.atualizado_em > b.atualizado_em ? a : b,
+          );
+          setUltima(mais.atualizado_em);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [listarFn, stripeFn]);
 
-  // Agrupa por conta
-  const porConta = repasses.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const handleAtualizar = async () => {
+    if (selecionadas.length === 0) return;
+    setAtualizando(true);
+    setErroMsg(null);
+    try {
+      await repassesFn({ data: { accountIds: selecionadas } });
+      await carregar();
+    } catch (e) {
+      setErroMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAtualizando(false);
+    }
+  };
+
+  const toggleConta = (id: string) =>
+    setSelecionadas(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
+    );
+
+  // Filtra para mostrar só as selecionadas (ou todas se nenhuma marcada)
+  const repassesVisiveis = selecionadas.length > 0
+    ? repasses.filter(r => selecionadas.includes(r.stripe_account_id))
+    : repasses;
+
+  const porConta = repassesVisiveis.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
     (acc, r) => {
       if (!acc[r.stripe_account_id]) acc[r.stripe_account_id] = { nome: r.conta_nome, repasses: [] };
       acc[r.stripe_account_id].repasses.push(r);
@@ -1285,49 +1320,115 @@ function RepassesSection() {
   );
 
   const statusLabel = (s: string) => {
-    if (s === "paid")       return { label: "✓ Pago",      cls: "bg-emerald-100 text-emerald-800" };
+    if (s === "paid")       return { label: "✓ Pago",       cls: "bg-emerald-100 text-emerald-800" };
     if (s === "in_transit") return { label: "⇢ Em trânsito", cls: "bg-blue-100 text-blue-800" };
-    if (s === "pending")    return { label: "⏱ Agendado",  cls: "bg-amber-100 text-amber-800" };
-    if (s === "failed")     return { label: "✕ Falhou",    cls: "bg-red-100 text-red-700" };
-    if (s === "canceled")   return { label: "Cancelado",   cls: "bg-gray-100 text-gray-600" };
+    if (s === "pending")    return { label: "⏱ Agendado",   cls: "bg-amber-100 text-amber-800" };
+    if (s === "failed")     return { label: "✕ Falhou",     cls: "bg-red-100 text-red-700" };
+    if (s === "canceled")   return { label: "Cancelado",    cls: "bg-gray-100 text-gray-600" };
     return { label: s, cls: "bg-secondary text-muted-foreground" };
   };
 
   const fmtDate = (d: string) =>
     new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR");
 
-  const totalGeral = repasses.reduce((a, r) => a + r.valor, 0);
+  const totalVisiveis = repassesVisiveis.reduce((a, r) => a + r.valor, 0);
 
   return (
     <section className="space-y-6">
+      {/* Cabeçalho */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-2xl font-semibold text-foreground">💸 Repasses</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Repasses programados pela Stripe para cada conta cadastrada.
-            Atualizado ao clicar em "Buscar transações" na aba Verificador de pagamentos.
+            Repasses programados pela Stripe. Selecione contas para filtrar e atualizar.
           </p>
           {ultimaAtualizacao && (
             <p className="mt-1 text-xs text-muted-foreground">
-              Última atualização: {new Date(ultimaAtualizacao).toLocaleString("pt-BR")}
+              Última atualização geral: {new Date(ultimaAtualizacao).toLocaleString("pt-BR")}
             </p>
           )}
         </div>
-        {repasses.length > 0 && (
+        {repassesVisiveis.length > 0 && (
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">
+              Total {selecionadas.length > 0 ? "selecionado" : "geral"}
+            </p>
             <p className="font-serif text-2xl font-semibold text-foreground">
-              {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {totalVisiveis.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
           </div>
         )}
       </div>
 
+      {/* Painel de seleção de contas */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-foreground">Contas</h3>
+          <button
+            onClick={handleAtualizar}
+            disabled={selecionadas.length === 0 || atualizando}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-crm-green px-4 text-sm font-semibold text-primary-foreground transition hover:bg-crm-green-dark disabled:opacity-50"
+          >
+            {atualizando ? (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            )}
+            Buscar repasses{selecionadas.length > 0 ? ` (${selecionadas.length})` : ""}
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {loading && contas.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Carregando contas…</span>
+          ) : contas.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Nenhuma conta cadastrada.</span>
+          ) : (
+            contas.map(c => {
+              const marcada = selecionadas.includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => toggleConta(c.id)}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                    marcada
+                      ? "border-crm-green bg-crm-green/10 text-crm-green"
+                      : "border-border bg-secondary/50 text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {marcada ? (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <span className="h-3.5 w-3.5 rounded border border-current opacity-40" />
+                  )}
+                  {c.nome}
+                </button>
+              );
+            })
+          )}
+        </div>
+        {selecionadas.length > 0 && !atualizando && (
+          <p className="text-xs text-muted-foreground">
+            Exibindo apenas repasses das {selecionadas.length} conta(s) selecionada(s). Clique em "Buscar repasses" para atualizar do servidor.
+          </p>
+        )}
+        {erroMsg && (
+          <p className="text-xs text-red-600">{erroMsg}</p>
+        )}
+      </div>
+
+      {/* Tabela de repasses */}
       {loading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
-      ) : repasses.length === 0 ? (
+      ) : repassesVisiveis.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          Nenhum repasse encontrado. Clique em "Buscar transações" na aba Verificador de pagamentos para atualizar.
+          {selecionadas.length > 0
+            ? "Nenhum repasse encontrado para as contas selecionadas."
+            : "Nenhum repasse encontrado. Selecione contas acima e clique em \"Buscar repasses\" para atualizar."}
         </div>
       ) : (
         <div className="space-y-6">
@@ -1382,6 +1483,7 @@ function RepassesSection() {
     </section>
   );
 }
+
 
 // ----------------- PENDENTES -----------------
 function PendentesSection() {
