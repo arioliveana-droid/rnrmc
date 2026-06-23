@@ -1305,12 +1305,8 @@ function RepassesSection() {
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
     );
 
-  // Filtra para mostrar só as selecionadas (ou todas se nenhuma marcada)
-  const repassesVisiveis = selecionadas.length > 0
-    ? repasses.filter(r => selecionadas.includes(r.stripe_account_id))
-    : repasses;
-
-  const porConta = repassesVisiveis.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
+  // Sempre mostra todos os repasses do banco — a seleção só controla o que é buscado na Stripe
+  const porConta = repasses.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
     (acc, r) => {
       if (!acc[r.stripe_account_id]) acc[r.stripe_account_id] = { nome: r.conta_nome, repasses: [] };
       acc[r.stripe_account_id].repasses.push(r);
@@ -1331,7 +1327,7 @@ function RepassesSection() {
   const fmtDate = (d: string) =>
     new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR");
 
-  const totalVisiveis = repassesVisiveis.reduce((a, r) => a + r.valor, 0);
+  const totalGeral = repasses.reduce((a, r) => a + r.valor, 0);
 
   return (
     <section className="space-y-6">
@@ -1348,13 +1344,11 @@ function RepassesSection() {
             </p>
           )}
         </div>
-        {repassesVisiveis.length > 0 && (
+        {repasses.length > 0 && (
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">
-              Total {selecionadas.length > 0 ? "selecionado" : "geral"}
-            </p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral</p>
             <p className="font-serif text-2xl font-semibold text-foreground">
-              {totalVisiveis.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
           </div>
         )}
@@ -1413,7 +1407,7 @@ function RepassesSection() {
         </div>
         {selecionadas.length > 0 && !atualizando && (
           <p className="text-xs text-muted-foreground">
-            Exibindo apenas repasses das {selecionadas.length} conta(s) selecionada(s). Clique em "Buscar repasses" para atualizar do servidor.
+            Clique em &quot;Buscar repasses&quot; para buscar na Stripe apenas as contas selecionadas.
           </p>
         )}
         {erroMsg && (
@@ -1424,11 +1418,9 @@ function RepassesSection() {
       {/* Tabela de repasses */}
       {loading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
-      ) : repassesVisiveis.length === 0 ? (
+      ) : repasses.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-          {selecionadas.length > 0
-            ? "Nenhum repasse encontrado para as contas selecionadas."
-            : "Nenhum repasse encontrado. Selecione contas acima e clique em \"Buscar repasses\" para atualizar."}
+          Nenhum repasse encontrado. Selecione contas acima e clique em &quot;Buscar repasses&quot; para atualizar.
         </div>
       ) : (
         <div className="space-y-6">
