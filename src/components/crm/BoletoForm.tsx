@@ -87,39 +87,8 @@ export function BoletoForm() {
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   void formatCurrency;
 
-  if (jaFoiPago) {
-    return (
-      <div className="min-h-screen bg-[oklch(0.985_0.008_158)] flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
-            <svg className="h-10 w-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="font-serif text-2xl font-semibold text-foreground">
-            Pagamento recebido
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            Seu pagamento já foi confirmado pelo nosso sistema.<br />
-            Não é necessário emitir um novo boleto.
-          </p>
-          <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
-            Caso tenha alguma dúvida sobre sua situação cadastral,
-            entre em contato com o CRM-MG.
-          </div>
-          <button
-            onClick={() => { setJaFoiPago(false); setCrm(""); setCpf(""); }}
-            className="mt-8 inline-flex items-center gap-2 rounded-xl border border-border bg-background px-6 py-3 text-sm font-medium text-foreground transition hover:bg-secondary"
-          >
-            Voltar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (debito) {
-    return <DebitoPortal debito={debito} onLogout={() => { setDebito(null); setCrm(""); setCpf(""); }} />;
+  if (jaFoiPago || debito) {
+    return <DebitoPortal debito={debito!} onLogout={() => { setDebito(null); setJaFoiPago(false); setCrm(""); setCpf(""); }} jaFoiPago={jaFoiPago} />;
   }
 
   return (

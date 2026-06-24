@@ -209,6 +209,7 @@ export type Database = {
           id: string
           janela_iniciada_em: string | null
           janela_termina_em: string | null
+          is_pj: boolean
           nome: string
           nome_trocado: boolean
           ordem: number
@@ -237,6 +238,7 @@ export type Database = {
           id?: string
           janela_iniciada_em?: string | null
           janela_termina_em?: string | null
+          is_pj?: boolean
           nome: string
           nome_trocado?: boolean
           ordem?: number
@@ -265,6 +267,7 @@ export type Database = {
           id?: string
           janela_iniciada_em?: string | null
           janela_termina_em?: string | null
+          is_pj?: boolean
           nome?: string
           nome_trocado?: boolean
           ordem?: number

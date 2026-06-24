@@ -48,6 +48,7 @@ export type StripeAccountRow = {
   total_boletos: number;
   ultimo_uso_em: string | null;
   trocas_no_dia: number;
+  is_pj: boolean;
 };
 
 // Retorna a "data operacional" considerando corte 07:00 BRT.
@@ -62,7 +63,7 @@ export function businessDay(now: Date = new Date()): string {
 }
 
 const SELECT_COLS =
-  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em, trocas_no_dia, limite_boletos_diario, limite_trocas_diario";
+  "id, nome, token, bearer_token, account_id, person_id, original_first_name, original_last_name, replacement_first_name, replacement_last_name, proxy_url, ativo, ordem, status, janela_iniciada_em, janela_termina_em, boletos_na_janela, boletos_no_dia, dia_referencia, cooldown_ate, nome_trocado, ultima_falha, ultima_acao_em, total_boletos, ultimo_uso_em, trocas_no_dia, limite_boletos_diario, limite_trocas_diario, is_pj";
 
 function stripeHeaders(acc: StripeAccountRow): Record<string, string> {
   const accId = acc.account_id ?? "";
@@ -91,11 +92,28 @@ async function callStripeUpdatePerson(
   first: string,
   last: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!acc.bearer_token || !acc.account_id || !acc.person_id) {
-    return { ok: false, error: "Conta sem bearer_token/account_id/person_id" };
+  if (!acc.bearer_token || !acc.account_id) {
+    return { ok: false, error: "Conta sem bearer_token/account_id" };
   }
-  const url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
-  const body = new URLSearchParams({ first_name: first, last_name: last }).toString();
+
+  let url: string;
+  let body: string;
+
+  if (acc.is_pj) {
+    url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}`;
+    body = new URLSearchParams({
+      "company[name]": first,
+      "business_profile[name]": last,
+      "settings[payments][statement_descriptor]": first,
+    }).toString();
+  } else {
+    if (!acc.person_id) {
+      return { ok: false, error: "Conta PF sem person_id" };
+    }
+    url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}/persons/${acc.person_id}`;
+    body = new URLSearchParams({ first_name: first, last_name: last }).toString();
+  }
+
   const headers = stripeHeaders(acc);
   const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
