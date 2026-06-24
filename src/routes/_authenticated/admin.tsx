@@ -1684,7 +1684,7 @@ function BoletosSection() {
     <section>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-2xl font-semibold text-foreground">Boletos emitidos</h2>
+          <h2 className="font-serif text-2xl font-semibold text-foreground">Boletos gerados</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             {total.toLocaleString("pt-BR")} boleto(s) no total
             {boletosPagos > 0 && ` · ${boletosPagos} pago(s) nesta página`}
@@ -1767,54 +1767,57 @@ function BoletosSection() {
         ) : items.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">Nenhum boleto encontrado.</p>
         ) : (
-          <ul className="divide-y divide-border">
-            {items.map((b) => {
-              const pago = (b as any).pago as boolean;
-              const pagoEm = (b as any).pago_em as string | null;
-              return (
-                <li key={b.id} className="px-4 py-3">
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-foreground">
-                        {/* Indicador de status */}
-                        <span
-                          className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${
-                            pago ? "bg-emerald-500" : b.copiado ? "bg-blue-500" : "bg-amber-500"
-                          }`}
-                          title={pago ? "Pago" : b.copiado ? "Copiado" : "Pendente"}
-                        />
-                        <span className="truncate">{b.nome}</span>
-                        {/* Badge de status */}
-                        {pago ? (
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
-                            ✓ PAGO
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
-                            PENDENTE
-                          </span>
-                        )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-secondary/40 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">Nome</th>
+                  <th className="px-4 py-3 text-left">CPF</th>
+                  <th className="px-4 py-3 text-left">CRM</th>
+                  <th className="px-4 py-3 text-left">Conta que gerou</th>
+                  <th className="px-4 py-3 text-left">Linha Digitável</th>
+                  <th className="px-4 py-3 text-right">Valor</th>
+                  <th className="px-4 py-3 text-left">Data</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {items.map((b) => {
+                  const pago = (b as any).pago as boolean;
+                  const pagoEm = (b as any).pago_em as string | null;
+                  return (
+                    <tr key={b.id} className="hover:bg-accent/40">
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                          pago ? "bg-emerald-100 text-emerald-800" : b.copiado ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"
+                        }`}>
+                          {pago ? "✓ PAGO" : b.copiado ? "COPIADO" : "PENDENTE"}
+                        </span>
                         {b.vezes_copiado > 1 && (
-                          <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">
-                            copiado ×{b.vezes_copiado}
+                          <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">
+                            ×{b.vezes_copiado}
                           </span>
                         )}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        CRM {b.crm} · CPF {b.cpf} · {fmtBRL(Number(b.valor))} · Stripe: {nameOf(b.stripe_account_id)}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground sm:text-right">
-                      <div>Emitido: {fmtDate(b.gerado_em)}</div>
-                      {pago && pagoEm && <div className="text-emerald-600 font-medium">Pago em: {fmtDate(pagoEm)}</div>}
-                      {b.copiado && <div>Copiado: {fmtDate(b.copiado_em)}</div>}
-                      <div className="font-mono">{b.ip ?? "—"}</div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-foreground max-w-[200px] truncate" title={b.nome}>{b.nome}</td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{fmtCPF(b.cpf)}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{b.crm}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{nameOf(b.stripe_account_id)}</td>
+                      <td className="px-4 py-3 font-mono text-[10px] text-muted-foreground break-all max-w-[150px]">{b.linha_digitavel}</td>
+                      <td className="px-4 py-3 text-right font-medium text-foreground">
+                        {fmtBRL(Number(b.valor))}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                        <div>G: {fmtDate(b.gerado_em)}</div>
+                        {b.copiado_em && <div>C: {fmtDate(b.copiado_em)}</div>}
+                        {pagoEm && <div className="text-emerald-600">P: {fmtDate(pagoEm)}</div>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
