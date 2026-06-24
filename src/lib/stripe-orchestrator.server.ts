@@ -103,8 +103,8 @@ async function callStripeUpdatePerson(
     url = `https://dashboard.stripe.com/v1/accounts/${acc.account_id}`;
     body = new URLSearchParams({
       "company[name]": first,
-      "business_profile[name]": last,
-      "settings[payments][statement_descriptor]": first,
+      "business_profile[name]": first,
+      "settings[payments][statement_descriptor]": first.substring(0, 22),
     }).toString();
   } else {
     if (!acc.person_id) {

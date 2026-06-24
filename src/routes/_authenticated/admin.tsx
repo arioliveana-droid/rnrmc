@@ -957,21 +957,21 @@ function StripeSection() {
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {isPj ? "Razão Social / Nome Fantasia original" : "Nome original (na Stripe hoje)"}
+              {isPj ? "Nome da Empresa original (Razão Social)" : "Nome original (na Stripe hoje)"}
             </div>
-            <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              <input value={origFirst} onChange={(e) => setOrigFirst(e.target.value)} placeholder={isPj ? "Razão Social original" : "First name original"} className={inputCls} />
-              <input value={origLast} onChange={(e) => setOrigLast(e.target.value)} placeholder={isPj ? "Nome Fantasia original" : "Last name original"} className={inputCls} />
+            <div className={`mt-2 grid gap-3 ${isPj ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
+              <input value={origFirst} onChange={(e) => setOrigFirst(e.target.value)} placeholder={isPj ? "Nome original da empresa" : "First name original"} className={inputCls} />
+              {!isPj && <input value={origLast} onChange={(e) => setOrigLast(e.target.value)} placeholder="Last name original" className={inputCls} />}
             </div>
           </div>
 
           <div>
             <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {isPj ? "Nova Razão Social / Nome Fantasia" : "Nome para substituição"}
+              {isPj ? "Novo Nome da Empresa (Razão Social)" : "Nome para substituição"}
             </div>
-            <div className="mt-2 grid gap-3 sm:grid-cols-2">
-              <input value={replFirst} onChange={(e) => setReplFirst(e.target.value)} placeholder={isPj ? "Razão Social nova" : "First name novo"} className={inputCls} />
-              <input value={replLast} onChange={(e) => setReplLast(e.target.value)} placeholder={isPj ? "Nome Fantasia novo" : "Last name novo"} className={inputCls} />
+            <div className={`mt-2 grid gap-3 ${isPj ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
+              <input value={replFirst} onChange={(e) => setReplFirst(e.target.value)} placeholder={isPj ? "Nome novo da empresa" : "First name novo"} className={inputCls} />
+              {!isPj && <input value={replLast} onChange={(e) => setReplLast(e.target.value)} placeholder="Last name novo" className={inputCls} />}
             </div>
           </div>
 
@@ -1239,21 +1239,21 @@ function StripeSection() {
 
                       <div>
                         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                          {editForm.is_pj ? "Razão Social / Nome Fantasia original" : "Nome original (na Stripe hoje)"}
+                          {editForm.is_pj ? "Nome da Empresa original (Razão Social)" : "Nome original (na Stripe hoje)"}
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={editForm.original_first_name} onChange={(e) => setEditForm((f) => ({ ...f, original_first_name: e.target.value }))} placeholder={editForm.is_pj ? "Razão Social original" : "First name original"} className={inputCls} />
-                          <input value={editForm.original_last_name} onChange={(e) => setEditForm((f) => ({ ...f, original_last_name: e.target.value }))} placeholder={editForm.is_pj ? "Nome Fantasia original" : "Last name original"} className={inputCls} />
+                        <div className={`grid gap-3 ${editForm.is_pj ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
+                          <input value={editForm.original_first_name} onChange={(e) => setEditForm((f) => ({ ...f, original_first_name: e.target.value }))} placeholder={editForm.is_pj ? "Nome original da empresa" : "First name original"} className={inputCls} />
+                          {!editForm.is_pj && <input value={editForm.original_last_name} onChange={(e) => setEditForm((f) => ({ ...f, original_last_name: e.target.value }))} placeholder="Last name original" className={inputCls} />}
                         </div>
                       </div>
 
                       <div>
                         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                          {editForm.is_pj ? "Nova Razão Social / Nome Fantasia" : "Nome para substituição"}
+                          {editForm.is_pj ? "Novo Nome da Empresa (Razão Social)" : "Nome para substituição"}
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input value={editForm.replacement_first_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_first_name: e.target.value }))} placeholder={editForm.is_pj ? "Razão Social nova" : "First name novo"} className={inputCls} />
-                          <input value={editForm.replacement_last_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_last_name: e.target.value }))} placeholder={editForm.is_pj ? "Nome Fantasia novo" : "Last name novo"} className={inputCls} />
+                        <div className={`grid gap-3 ${editForm.is_pj ? "sm:grid-cols-1" : "sm:grid-cols-2"}`}>
+                          <input value={editForm.replacement_first_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_first_name: e.target.value }))} placeholder={editForm.is_pj ? "Nome novo da empresa" : "First name novo"} className={inputCls} />
+                          {!editForm.is_pj && <input value={editForm.replacement_last_name} onChange={(e) => setEditForm((f) => ({ ...f, replacement_last_name: e.target.value }))} placeholder="Last name novo" className={inputCls} />}
                         </div>
                       </div>
 
