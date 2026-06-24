@@ -1660,6 +1660,11 @@ function BoletosSection() {
 
   const goToPage = (p: number) => setPage(p);
 
+  const fmtCPF = (cpf: string) => {
+    const d = cpf.padStart(11, "0");
+    return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9, 11)}`;
+  };
+
   const nameOf = (id: string | null) =>
     id ? accounts.find((a) => a.id === id)?.nome ?? "—" : "sem stripe";
 
