@@ -2257,7 +2257,7 @@ function HistoricoSection() {
 
   // ── Handlers ──
 
-  const handleBuscar = async () => {
+  const handleConsultaCompleta = async () => {
     if (!dataInicio || !dataFim) return;
     setBuscando(true);
     setResultado(null);
@@ -2278,6 +2278,26 @@ function HistoricoSection() {
       setErroMsg(e instanceof Error ? e.message : String(e));
     } finally {
       setBuscando(false);
+    }
+  };
+
+  const [buscandoRapido, setBuscandoRapido] = useState(false);
+
+  const handleConsultaRapidaHoje = async () => {
+    setBuscandoRapido(true);
+    setResultado(null);
+    setMatches([]);
+    setSelectedIds(new Set());
+    setRemovidosMensagem(null);
+    setErroMsg(null);
+    setPaginaAtual(0);
+    try {
+      const r = await buscarFn({ data: { dataInicio: hoje, dataFim: hoje } });
+      setResultado(r);
+    } catch (e) {
+      setErroMsg(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBuscandoRapido(false);
     }
   };
 
@@ -2403,21 +2423,37 @@ function HistoricoSection() {
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
             />
           </div>
-          <button
-            onClick={handleBuscar}
-            disabled={buscando || !dataInicio || !dataFim}
-            className="h-10 rounded-lg bg-crm-green px-6 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {buscando ? (
-              <span className="flex items-center gap-2">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                Buscando em todas as contas…
-              </span>
-            ) : (
-              "Buscar transações"
-            )}
-          </button>
-          {buscando && (
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleConsultaCompleta}
+              disabled={buscando || buscandoRapido || !dataInicio || !dataFim}
+              className="h-10 rounded-lg bg-secondary px-6 text-sm font-semibold text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
+            >
+              {buscando ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Buscando completo…
+                </span>
+              ) : (
+                "Consulta Completa (com Repasses)"
+              )}
+            </button>
+            <button
+              onClick={handleConsultaRapidaHoje}
+              disabled={buscando || buscandoRapido}
+              className="h-10 rounded-lg bg-crm-green px-6 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            >
+              {buscandoRapido ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Buscando hoje…
+                </span>
+              ) : (
+                "Verificar Somente os Pagamentos de Hoje"
+              )}
+            </button>
+          </div>
+          {(buscando || buscandoRapido) && (
             <p className="text-xs text-muted-foreground">
               Isso pode levar alguns segundos dependendo do volume de boletos e número de contas.
             </p>
