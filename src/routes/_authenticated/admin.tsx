@@ -2393,6 +2393,12 @@ function HistoricoSection() {
     else setSelectedIds(new Set(matches.map((d) => d.id)));
   };
 
+  const toggleConta = (id: string) =>
+    setSelecionadas(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
+    );
+
+
   const statusLabel = (s: string) => {
     if (s === "succeeded") return { label: "✓ Pago", cls: "bg-emerald-100 text-emerald-800" };
     if (s === "requires_action") return { label: "Aguardando", cls: "bg-amber-100 text-amber-800" };
