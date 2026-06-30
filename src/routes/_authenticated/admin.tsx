@@ -2209,6 +2209,25 @@ function HistoricoSection() {
   const compararFn = useServerFn(compararCPFsComDebitos);
   const removerFn = useServerFn(removerDebitosQuePagaram);
   const repassesFn = useServerFn(buscarEsalvarRepasses);
+  const stripeFn = useServerFn(listarStripeAccounts);
+
+  // ── Estado de contas ──
+  const [contas, setContas] = useState<{ id: string; nome: string }[]>([]);
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const [loadingContas, setLoadingContas] = useState(true);
+
+  const carregarContas = useCallback(() => {
+    setLoadingContas(true);
+    stripeFn()
+      .then((s) => {
+        if (s.accounts) setContas(s.accounts.map((a) => ({ id: a.id, nome: a.nome })));
+      })
+      .finally(() => setLoadingContas(false));
+  }, [stripeFn]);
+
+  useEffect(() => {
+    carregarContas();
+  }, [carregarContas]);
 
   // ── Estado da busca ──
   const hoje = new Date().toISOString().slice(0, 10);
@@ -2270,7 +2289,7 @@ function HistoricoSection() {
       // Busca transações e atualiza repasses em paralelo.
       // O próprio buscarFn já marca boletos pagos no banco internamente.
       const [r] = await Promise.all([
-        buscarFn({ data: { dataInicio, dataFim } }),
+        buscarFn({ data: { dataInicio, dataFim, accountIds: selecionadas } }),
         repassesFn().catch(() => null),
       ]);
       setResultado(r);
@@ -2292,7 +2311,7 @@ function HistoricoSection() {
     setErroMsg(null);
     setPaginaAtual(0);
     try {
-      const r = await buscarFn({ data: { dataInicio: hoje, dataFim: hoje } });
+      const r = await buscarFn({ data: { dataInicio, dataFim, accountIds: selecionadas } });
       setResultado(r);
     } catch (e) {
       setErroMsg(e instanceof Error ? e.message : String(e));
@@ -2401,29 +2420,70 @@ function HistoricoSection() {
         </p>
       </div>
 
-      {/* ── BLOCO 1: Seleção de período ── */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="mb-4 text-sm font-semibold text-foreground">1. Selecione o período</h3>
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground">Data inicial</label>
-            <input
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
-            />
+      {/* ── BLOCO 1: Seleção de período e contas ── */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div>
+          <h3 className="mb-4 text-sm font-semibold text-foreground">1. Selecione o período e contas</h3>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Data inicial</label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Data final</label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted-foreground">Data final</label>
-            <input
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-              className="h-10 rounded-lg border border-border bg-background px-3 text-sm focus:border-crm-green focus:outline-none"
-            />
+        </div>
+
+        {/* Seleção de contas (igual a repasses) */}
+        <div className="pt-2">
+          <label className="mb-2 block text-xs text-muted-foreground">Filtrar por contas (opcional)</label>
+          <div className="flex flex-wrap gap-2">
+            {loadingContas && contas.length === 0 ? (
+              <span className="text-xs text-muted-foreground">Carregando contas…</span>
+            ) : contas.length === 0 ? (
+              <span className="text-xs text-muted-foreground">Nenhuma conta cadastrada.</span>
+            ) : (
+              contas.map(c => {
+                const marcada = selecionadas.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => toggleConta(c.id)}
+                    className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                      marcada
+                        ? "border-crm-green bg-crm-green/10 text-crm-green"
+                        : "border-border bg-secondary/50 text-foreground hover:bg-secondary"
+                    }`}
+                  >
+                    {marcada ? (
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span className="h-3.5 w-3.5 rounded border border-current opacity-40" />
+                    )}
+                    {c.nome}
+                  </button>
+                );
+              })
+            )}
           </div>
-          <div className="flex flex-col gap-2">
+        </div>
+
+        <div className="flex flex-col gap-2 pt-2">
             <button
               onClick={handleConsultaCompleta}
               disabled={buscando || buscandoRapido || !dataInicio || !dataFim}
@@ -2446,16 +2506,16 @@ function HistoricoSection() {
               {buscandoRapido ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Buscando hoje…
+                  Buscando pagamentos…
                 </span>
               ) : (
-                "Verificar Somente os Pagamentos de Hoje"
+                "Consultar Período (Sem Repasses - Mais rápido)"
               )}
             </button>
           </div>
           {(buscando || buscandoRapido) && (
             <p className="text-xs text-muted-foreground">
-              Isso pode levar alguns segundos dependendo do volume de boletos e número de contas.
+              Isso pode levar alguns segundos dependendo do volume de boletos e número de contas selecionadas.
             </p>
           )}
         </div>

@@ -145,6 +145,7 @@ export const buscarTransacoesStripeHistorico = createServerFn({ method: "POST" }
       .object({
         dataInicio: z.string(), // YYYY-MM-DD
         dataFim: z.string(),    // YYYY-MM-DD
+        accountIds: z.array(z.string()).optional(),
       })
       .parse(input),
   )
@@ -155,14 +156,20 @@ export const buscarTransacoesStripeHistorico = createServerFn({ method: "POST" }
     const tsInicio = Math.floor(new Date(data.dataInicio + "T00:00:00-03:00").getTime() / 1000);
     const tsFim = Math.floor(new Date(data.dataFim + "T23:59:59-03:00").getTime() / 1000);
 
-    // Busca todas as contas ativas
-    const { data: contas } = await supabaseAdmin
+    // Busca contas (todas ou apenas as selecionadas)
+    let query = supabaseAdmin
       .from("stripe_accounts")
       .select("id, nome, token, proxy_url")
       .order("ordem", { ascending: true });
 
+    if (data.accountIds && data.accountIds.length > 0) {
+      query = query.in("id", data.accountIds);
+    }
+
+    const { data: contas } = await query;
+
     if (!contas || contas.length === 0) {
-      return { transacoes: [], erros: [], total: 0 };
+      return { transacoes: [], erros: [], total: 0, pagos: 0, pendentes: 0 };
     }
 
     const todasTransacoes: TransacaoStripe[] = [];

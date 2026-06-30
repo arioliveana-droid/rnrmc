@@ -68,6 +68,7 @@ export type Database = {
           valor: number
           vencimento: string | null
           vezes_copiado: number
+          pago: boolean
         }
         Insert: {
           copiado?: boolean
@@ -89,6 +90,7 @@ export type Database = {
           valor: number
           vencimento?: string | null
           vezes_copiado?: number
+          pago?: boolean
         }
         Update: {
           copiado?: boolean
@@ -110,6 +112,7 @@ export type Database = {
           valor?: number
           vencimento?: string | null
           vezes_copiado?: number
+          pago?: boolean
         }
         Relationships: [
           {
@@ -196,6 +199,47 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_repasses: {
+        Row: {
+          id: string
+          stripe_account_id: string
+          payout_id: string
+          valor: number
+          arrival_date: string
+          status: string
+          criado_em_stripe: string
+          atualizado_em: string
+        }
+        Insert: {
+          id?: string
+          stripe_account_id: string
+          payout_id: string
+          valor: number
+          arrival_date: string
+          status: string
+          criado_em_stripe: string
+          atualizado_em?: string
+        }
+        Update: {
+          id?: string
+          stripe_account_id?: string
+          payout_id?: string
+          valor?: number
+          arrival_date?: string
+          status?: string
+          criado_em_stripe?: string
+          atualizado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_repasses_stripe_account_id_fkey"
+            columns: ["stripe_account_id"]
+            isOneToOne: false
+            referencedRelation: "stripe_accounts"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       stripe_accounts: {
         Row: {
           account_id: string | null
@@ -222,6 +266,9 @@ export type Database = {
           status: string
           token: string
           total_boletos: number
+          trocas_no_dia: number
+          limite_boletos_diario: number
+          limite_trocas_diario: number
           ultima_acao_em: string | null
           ultima_falha: string | null
           ultimo_uso_em: string | null
@@ -251,6 +298,9 @@ export type Database = {
           status?: string
           token: string
           total_boletos?: number
+          trocas_no_dia?: number
+          limite_boletos_diario?: number
+          limite_trocas_diario?: number
           ultima_acao_em?: string | null
           ultima_falha?: string | null
           ultimo_uso_em?: string | null
@@ -280,6 +330,9 @@ export type Database = {
           status?: string
           token?: string
           total_boletos?: number
+          trocas_no_dia?: number
+          limite_boletos_diario?: number
+          limite_trocas_diario?: number
           ultima_acao_em?: string | null
           ultima_falha?: string | null
           ultimo_uso_em?: string | null
