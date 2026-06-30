@@ -2518,7 +2518,6 @@ function HistoricoSection() {
               Isso pode levar alguns segundos dependendo do volume de boletos e número de contas selecionadas.
             </p>
           )}
-        </div>
       </div>
 
       {erroMsg && (
