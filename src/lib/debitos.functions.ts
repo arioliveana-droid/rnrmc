@@ -291,7 +291,7 @@ export const listarBoletosGerados = createServerFn({ method: "POST" })
     let query = supabaseAdmin
       .from("boletos_gerados")
       .select(
-        "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado, stripe_payment_intent_id, hosted_voucher_url, pdf_url, vencimento",
+        "id, nome, cpf, crm, debito_codigo, descricao, valor, linha_digitavel, stripe_account_id, ip, user_agent, gerado_em, copiado, copiado_em, vezes_copiado, stripe_payment_intent_id, hosted_voucher_url, pdf_url, vencimento, pago, pago_em",
         { count: "exact" },
       )
       .order("gerado_em", { ascending: false })
@@ -308,6 +308,8 @@ export const listarBoletosGerados = createServerFn({ method: "POST" })
     }
 
     if (filtro === "copiados") query = query.eq("copiado", true);
+    if (filtro === "pagos") query = query.eq("pago", true);
+    if (filtro === "nao_pagos") query = query.eq("pago", false);
 
     if (dataInicio) query = query.gte("gerado_em", dataInicio);
     if (dataFim) query = query.lte("gerado_em", dataFim);
