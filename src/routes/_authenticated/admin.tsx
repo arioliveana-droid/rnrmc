@@ -32,6 +32,7 @@ import {
 import {
   buscarEsalvarRepasses,
   listarRepasses,
+  somarRepassesPagos,
   type Repasse,
 } from "@/lib/stripe-repasses.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -748,7 +749,7 @@ function StripeSection() {
   const runTick = useServerFn(tickOrquestrador);
   const updateAccount = useServerFn(atualizarStripeAccount);
   const resetLimites = useServerFn(resetarLimitesStripe);
-  const listarRepassesFn = useServerFn(listarRepasses);
+  const listarRepassesFn = useServerFn(somarRepassesPagos);
 
   const [saldoPorConta, setSaldoPorConta] = useState<Record<string, number>>({});
 
@@ -823,14 +824,7 @@ function StripeSection() {
   const load = useCallback(async () => {
     const [r, rep] = await Promise.all([list(), listarRepassesFn()]);
     setItems((r.accounts ?? []) as StripeAccount[]);
-    // Soma os repasses pagos por conta
-    const saldo: Record<string, number> = {};
-    for (const rp of rep.repasses ?? []) {
-      if (rp.status === "paid") {
-        saldo[rp.stripe_account_id] = (saldo[rp.stripe_account_id] ?? 0) + rp.valor;
-      }
-    }
-    setSaldoPorConta(saldo);
+    setSaldoPorConta(rep.saldo ?? {});
   }, [list, listarRepassesFn]);
 
   useEffect(() => {

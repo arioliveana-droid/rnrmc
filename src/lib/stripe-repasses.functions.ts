@@ -146,3 +146,29 @@ export const listarRepasses = createServerFn({ method: "POST" })
 
     return { repasses };
   });
+
+/**
+ * Soma o valor total de repasses com status "paid" por conta, direto do banco.
+ */
+export const somarRepassesPagos = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const { data, error } = await supabaseAdmin
+      .from("stripe_repasses")
+      .select("stripe_account_id, valor")
+      .eq("status", "paid");
+
+    if (error) {
+      console.error("somarRepassesPagos", error);
+      return { saldo: {} as Record<string, number> };
+    }
+
+    const saldo: Record<string, number> = {};
+    for (const r of data ?? []) {
+      saldo[r.stripe_account_id] = (saldo[r.stripe_account_id] ?? 0) + Number(r.valor);
+    }
+
+    return { saldo };
+  });
