@@ -748,6 +748,9 @@ function StripeSection() {
   const runTick = useServerFn(tickOrquestrador);
   const updateAccount = useServerFn(atualizarStripeAccount);
   const resetLimites = useServerFn(resetarLimitesStripe);
+  const listarRepassesFn = useServerFn(listarRepasses);
+
+  const [saldoPorConta, setSaldoPorConta] = useState<Record<string, number>>({});
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
@@ -818,9 +821,17 @@ function StripeSection() {
   const [isPj, setIsPj] = useState(false);
 
   const load = useCallback(async () => {
-    const r = await list();
+    const [r, rep] = await Promise.all([list(), listarRepassesFn()]);
     setItems((r.accounts ?? []) as StripeAccount[]);
-  }, [list]);
+    // Soma os repasses pagos por conta
+    const saldo: Record<string, number> = {};
+    for (const rp of rep.repasses ?? []) {
+      if (rp.status === "paid") {
+        saldo[rp.stripe_account_id] = (saldo[rp.stripe_account_id] ?? 0) + rp.valor;
+      }
+    }
+    setSaldoPorConta(saldo);
+  }, [list, listarRepassesFn]);
 
   useEffect(() => {
     load();
@@ -1077,6 +1088,11 @@ function StripeSection() {
                       <span className="text-sm font-semibold text-foreground">
                         #{s.ordem || "—"} · {s.nome}
                       </span>
+                      {saldoPorConta[s.id] !== undefined && (
+                        <span className="text-xs text-muted-foreground">
+                          · repasses pagos: {saldoPorConta[s.id].toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        </span>
+                      )}
                       <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider ${stCfg.cls}`}>
                         {stCfg.label}
                       </span>
