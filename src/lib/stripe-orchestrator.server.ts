@@ -199,15 +199,15 @@ async function closeWindow(acc: StripeAccountRow): Promise<void> {
   if (
     a.nome_trocado &&
     a.original_first_name &&
-    a.original_last_name &&
     a.bearer_token &&
     a.account_id &&
-    a.person_id
+    // PJ não precisa de person_id; PF precisa
+    (a.is_pj || a.person_id)
   ) {
     const r = await callStripeUpdatePerson(
       a,
       a.original_first_name,
-      a.original_last_name,
+      a.original_last_name ?? "",
     );
     if (r.ok) {
       nomeTrocado = false;
@@ -377,19 +377,21 @@ async function openAccount(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (
     !acc.replacement_first_name ||
-    !acc.replacement_last_name ||
-    !acc.original_first_name ||
-    !acc.original_last_name
+    !acc.original_first_name
   ) {
     return { ok: false, error: "Faltam nomes original/substituto" };
   }
-  if (!acc.bearer_token || !acc.account_id || !acc.person_id) {
-    return { ok: false, error: "Faltam credenciais (bearer/account/person)" };
+  if (!acc.bearer_token || !acc.account_id) {
+    return { ok: false, error: "Faltam credenciais (bearer/account)" };
+  }
+  // PF exige person_id; PJ não
+  if (!acc.is_pj && !acc.person_id) {
+    return { ok: false, error: "Conta PF sem person_id" };
   }
   return callStripeUpdatePerson(
     acc,
     acc.replacement_first_name,
-    acc.replacement_last_name,
+    acc.replacement_last_name ?? "",
   );
 }
 
@@ -486,9 +488,11 @@ export async function acquireAccountForBoleto(): Promise<
     const limitBoletos = a.limite_boletos_diario ?? DAILY_LIMIT;
     if ((a.boletos_no_dia ?? 0) >= limitBoletos) return false;
 
-    if (!a.bearer_token || !a.account_id || !a.person_id) return false;
-    if (!a.original_first_name || !a.original_last_name) return false;
-    if (!a.replacement_first_name || !a.replacement_last_name) return false;
+    if (!a.bearer_token || !a.account_id) return false;
+    // PF exige person_id; PJ não
+    if (!a.is_pj && !a.person_id) return false;
+    if (!a.original_first_name) return false;
+    if (!a.replacement_first_name) return false;
     return true;
   });
 
