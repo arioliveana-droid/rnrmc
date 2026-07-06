@@ -561,13 +561,13 @@ export async function manualSwapToReplacement(
     .maybeSingle();
   const acc = row as StripeAccountRow | null;
   if (!acc) return { ok: false, error: "Conta não encontrada" };
-  if (!acc.replacement_first_name || !acc.replacement_last_name) {
+  if (!acc.replacement_first_name || (!acc.is_pj && !acc.replacement_last_name)) {
     return { ok: false, error: "Faltam nomes substitutos" };
   }
   const r = await callStripeUpdatePerson(
     acc,
     acc.replacement_first_name,
-    acc.replacement_last_name,
+    acc.replacement_last_name ?? "",
   );
   const nowIso = new Date().toISOString();
   if (!r.ok) {
@@ -602,13 +602,13 @@ export async function manualRevertToOriginal(
     .maybeSingle();
   const acc = row as StripeAccountRow | null;
   if (!acc) return { ok: false, error: "Conta não encontrada" };
-  if (!acc.original_first_name || !acc.original_last_name) {
+  if (!acc.original_first_name || (!acc.is_pj && !acc.original_last_name)) {
     return { ok: false, error: "Faltam nomes originais" };
   }
   const r = await callStripeUpdatePerson(
     acc,
     acc.original_first_name,
-    acc.original_last_name,
+    acc.original_last_name ?? "",
   );
   const nowIso = new Date().toISOString();
   if (!r.ok) {
