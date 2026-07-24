@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
 
-const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
 
 export type Repasse = {
   id: string;

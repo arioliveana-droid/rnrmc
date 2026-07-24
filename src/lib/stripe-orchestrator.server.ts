@@ -115,7 +115,7 @@ async function callStripeUpdatePerson(
   }
 
   const headers = stripeHeaders(acc);
-  const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+  const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
   const MAX_ATTEMPTS = 3;
   const errors: string[] = [];
@@ -270,7 +270,7 @@ async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<numbe
     pendentes.map((b) => [b.stripe_payment_intent_id as string, b.id]),
   );
 
-  const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+  const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
   const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
   const headers = {
     Authorization: `Bearer ${acc.token}`,

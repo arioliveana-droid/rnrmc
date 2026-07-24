@@ -17,7 +17,7 @@ export type StripeBoletoResult =
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
-const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
 
 // CEPs válidos (BH, Juiz de Fora, SP, RJ, Guarulhos)
 const CEPS = [

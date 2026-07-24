@@ -32,7 +32,7 @@ export type TransacaoStripe = {
 // Helper: pagina todos os PaymentIntents de uma conta Stripe no período
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFAULT_PROXY = "http://smart-cadunico_area-BR:Trampo23@proxy.smartproxy.net:3120";
+const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
 
 async function fetchAllPIsForAccount(
   token: string,
