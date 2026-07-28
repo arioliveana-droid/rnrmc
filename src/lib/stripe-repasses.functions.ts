@@ -172,3 +172,79 @@ export const somarRepassesPagos = createServerFn({ method: "POST" })
 
     return { saldo };
   });
+
+export type PrevisaoRepasse = {
+  stripe_account_id: string;
+  conta_nome: string;
+  valor: number;
+  pago_em: string;       // data que o boleto foi pago (YYYY-MM-DD)
+  previsao_data: string; // data estimada do repasse (YYYY-MM-DD)
+  qtd_boletos: number;
+};
+
+/**
+ * Calcula previsões de repasse com base nos boletos pagos nos últimos 7 dias.
+ * Regra: boleto pago em X → repasse previsto em X + 2 dias úteis.
+ * Exclui fins de semana no cálculo.
+ */
+export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Busca boletos pagos nos últimos 7 dias com conta stripe
+    const desde = new Date();
+    desde.setDate(desde.getDate() - 7);
+    const desdeIso = desde.toISOString();
+
+    const { data: boletos, error } = await supabaseAdmin
+      .from("boletos_gerados")
+      .select("stripe_account_id, valor, pago_em, stripe_accounts(nome)")
+      .eq("pago", true)
+      .not("pago_em", "is", null)
+      .gte("pago_em", desdeIso)
+      .not("stripe_account_id", "is", null);
+
+    if (error || !boletos || boletos.length === 0) {
+      return { previsoes: [] as PrevisaoRepasse[] };
+    }
+
+    // Adiciona N dias úteis (pula sábado e domingo)
+    function addBusinessDays(dateStr: string, days: number): string {
+      const d = new Date(dateStr + "T12:00:00Z");
+      let added = 0;
+      while (added < days) {
+        d.setUTCDate(d.getUTCDate() + 1);
+        const dow = d.getUTCDay(); // 0=Dom, 6=Sáb
+        if (dow !== 0 && dow !== 6) added++;
+      }
+      return d.toISOString().slice(0, 10);
+    }
+
+    // Agrupa por conta + dia de pagamento
+    const grupos = new Map<string, PrevisaoRepasse>();
+    for (const b of boletos) {
+      const acc = b as any;
+      const pagoEm = (acc.pago_em as string).slice(0, 10);
+      const key = `${acc.stripe_account_id}__${pagoEm}`;
+      if (!grupos.has(key)) {
+        grupos.set(key, {
+          stripe_account_id: acc.stripe_account_id,
+          conta_nome: acc.stripe_accounts?.nome ?? "—",
+          valor: 0,
+          pago_em: pagoEm,
+          previsao_data: addBusinessDays(pagoEm, 2),
+          qtd_boletos: 0,
+        });
+      }
+      const g = grupos.get(key)!;
+      g.valor += Number(acc.valor);
+      g.qtd_boletos += 1;
+    }
+
+    const previsoes = Array.from(grupos.values()).sort(
+      (a, b) => a.previsao_data.localeCompare(b.previsao_data),
+    );
+
+    return { previsoes };
+  });

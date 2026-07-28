@@ -33,7 +33,9 @@ import {
   buscarEsalvarRepasses,
   listarRepasses,
   somarRepassesPagos,
+  listarPrevisoesRepasses,
   type Repasse,
+  type PrevisaoRepasse,
 } from "@/lib/stripe-repasses.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -1309,8 +1311,10 @@ function RepassesSection() {
   const listarFn      = useServerFn(listarRepasses);
   const stripeFn      = useServerFn(listarStripeAccounts);
   const repassesFn    = useServerFn(buscarEsalvarRepasses);
+  const previFn       = useServerFn(listarPrevisoesRepasses);
 
   const [repasses, setRepasses]           = useState<Repasse[]>([]);
+  const [previsoes, setPrevisoes]         = useState<PrevisaoRepasse[]>([]);
   const [contas,   setContas]             = useState<{ id: string; nome: string }[]>([]);
   const [selecionadas, setSelecionadas]   = useState<string[]>([]);
   const [loading,  setLoading]            = useState(true);
@@ -1320,9 +1324,10 @@ function RepassesSection() {
 
   const carregar = useCallback(() => {
     setLoading(true);
-    Promise.all([listarFn(), stripeFn()])
-      .then(([r, s]) => {
+    Promise.all([listarFn(), stripeFn(), previFn()])
+      .then(([r, s, p]) => {
         setRepasses(r.repasses);
+        setPrevisoes(p.previsoes ?? []);
         if (s.accounts) setContas(s.accounts.map(a => ({ id: a.id, nome: a.nome })));
         if (r.repasses.length > 0) {
           const mais = r.repasses.reduce((a, b) =>
@@ -1377,7 +1382,19 @@ function RepassesSection() {
   const fmtDate = (d: string) =>
     new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR");
 
-  const totalGeral = repasses.reduce((a, r) => a + r.valor, 0);
+  const totalRepasses  = repasses.reduce((a, r) => a + r.valor, 0);
+  const totalPrevisoes = previsoes.reduce((a, p) => a + p.valor, 0);
+  const totalGeral     = totalRepasses + totalPrevisoes;
+
+  // Agrupa previsões por conta
+  const previsoesporConta = previsoes.reduce<Record<string, { nome: string; itens: PrevisaoRepasse[] }>>(
+    (acc, p) => {
+      if (!acc[p.stripe_account_id]) acc[p.stripe_account_id] = { nome: p.conta_nome, itens: [] };
+      acc[p.stripe_account_id].itens.push(p);
+      return acc;
+    },
+    {},
+  );
 
   return (
     <section className="space-y-6">
@@ -1394,12 +1411,17 @@ function RepassesSection() {
             </p>
           )}
         </div>
-        {repasses.length > 0 && (
+        {(repasses.length > 0 || previsoes.length > 0) && (
           <div className="text-right">
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral</p>
             <p className="font-serif text-2xl font-semibold text-foreground">
               {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
+            {totalPrevisoes > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                inclui {totalPrevisoes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} previstos
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -1514,6 +1536,65 @@ function RepassesSection() {
                           </tr>
                         );
                       })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Previsões de repasse ── */}
+      {previsoes.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            📅 Previsões de repasse
+            <span className="text-xs font-normal text-muted-foreground">(boletos pagos recentemente — estimativa +2 dias úteis)</span>
+          </h3>
+          {Object.entries(previsoesporConta).map(([contaId, { nome, itens }]) => {
+            const totalConta = itens.reduce((a, p) => a + p.valor, 0);
+            return (
+              <div key={contaId} className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800">
+                <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800 px-4 py-3">
+                  <span className="text-sm font-semibold text-foreground">{nome}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {totalConta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-amber-200 dark:border-amber-800 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-4 py-2 text-left">Pago em</th>
+                        <th className="px-4 py-2 text-left">Previsão repasse</th>
+                        <th className="px-4 py-2 text-right">Valor</th>
+                        <th className="px-4 py-2 text-left">Boletos</th>
+                        <th className="px-4 py-2 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-100 dark:divide-amber-900">
+                      {itens.map((p) => (
+                        <tr key={`${p.stripe_account_id}-${p.pago_em}`} className="hover:bg-amber-100/50 dark:hover:bg-amber-900/20">
+                          <td className="px-4 py-2.5 text-foreground">
+                            {new Date(p.pago_em + "T12:00:00Z").toLocaleDateString("pt-BR")}
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">
+                            {new Date(p.previsao_data + "T12:00:00Z").toLocaleDateString("pt-BR")}
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-foreground">
+                            {p.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
+                            {p.qtd_boletos} boleto(s)
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                              ⏳ Previsto
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
