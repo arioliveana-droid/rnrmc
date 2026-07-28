@@ -209,6 +209,19 @@ export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
       return { previsoes: [] as PrevisaoRepasse[] };
     }
 
+    // Busca a data do último repasse (payout) gerado por conta
+    const { data: repasses } = await supabaseAdmin
+      .from("stripe_repasses")
+      .select("stripe_account_id, criado_em_stripe");
+
+    const ultimoRepasse = new Map<string, string>();
+    for (const r of repasses ?? []) {
+      const atual = ultimoRepasse.get(r.stripe_account_id);
+      if (!atual || r.criado_em_stripe > atual) {
+        ultimoRepasse.set(r.stripe_account_id, r.criado_em_stripe);
+      }
+    }
+
     // Adiciona N dias úteis (pula sábado e domingo)
     function addBusinessDays(dateStr: string, days: number): string {
       const d = new Date(dateStr + "T12:00:00Z");
@@ -225,6 +238,12 @@ export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
     const grupos = new Map<string, PrevisaoRepasse>();
     for (const b of boletos) {
       const acc = b as any;
+      
+      // Se o boleto foi pago ANTES do último repasse dessa conta ter sido criado,
+      // significa que esse valor já entrou naquele repasse real. Não prever mais.
+      const maxRepasse = ultimoRepasse.get(acc.stripe_account_id);
+      if (maxRepasse && acc.pago_em <= maxRepasse) continue;
+
       const pagoEm = (acc.pago_em as string).slice(0, 10);
       const key = `${acc.stripe_account_id}__${pagoEm}`;
       if (!grupos.has(key)) {
