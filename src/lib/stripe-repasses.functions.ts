@@ -192,12 +192,15 @@ export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Busca APENAS boletos pagos HOJE
-    // O usuário pediu para que amanhã as previsões de hoje sumam e entrem apenas as de amanhã.
-    const hojeData = new Date();
-    // Ajusta para fuso do Brasil (opcional) ou pega UTC mesmo
-    const hojeIso = hojeData.toISOString().slice(0, 10);
-    const inicioDoDia = `${hojeIso}T00:00:00Z`;
+    // Busca APENAS boletos pagos HOJE no horário de Brasília (UTC-3).
+    // Meia-noite BRT = 03:00 UTC. Sem isso, boletos pagos ontem à noite no Brasil
+    // (ex: 22h BRT = 01h UTC do dia seguinte) entram erroneamente como previsão de hoje.
+    const agora = new Date();
+    // Calcula "hoje" no fuso de Brasília subtraindo 3h do UTC
+    const agoraBRT = new Date(agora.getTime() - 3 * 60 * 60 * 1000);
+    const hojeBRT = agoraBRT.toISOString().slice(0, 10); // YYYY-MM-DD em horário BRT
+    // Meia-noite BRT em UTC = hojeBRT + T03:00:00Z
+    const inicioDoDia = `${hojeBRT}T03:00:00Z`;
 
     const { data: boletos, error } = await supabaseAdmin
       .from("boletos_gerados")
