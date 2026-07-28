@@ -1360,11 +1360,32 @@ function RepassesSection() {
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
     );
 
-  // Sempre mostra todos os repasses do banco — a seleção só controla o que é buscado na Stripe
-  const porConta = repasses.reduce<Record<string, { nome: string; repasses: Repasse[] }>>(
+  // Combina repasses reais e previsões para exibir na mesma tabela
+  type MixedRepasse = Repasse & { isPrevisao?: boolean; qtd_boletos?: number; pago_em?: string };
+  
+  const allItems: MixedRepasse[] = [
+    ...repasses.map(r => ({ ...r, isPrevisao: false })),
+    ...previsoes.map(p => ({
+      id: `prev-${p.stripe_account_id}-${p.pago_em}`,
+      stripe_account_id: p.stripe_account_id,
+      conta_nome: p.conta_nome,
+      payout_id: "",
+      valor: p.valor,
+      arrival_date: p.previsao_data,
+      status: "previsto",
+      criado_em_stripe: new Date(p.pago_em + "T12:00:00Z").toISOString(),
+      atualizado_em: new Date().toISOString(),
+      isPrevisao: true,
+      qtd_boletos: p.qtd_boletos,
+      pago_em: p.pago_em,
+    }))
+  ];
+
+  // Sempre mostra todos os repasses e previsões
+  const porConta = allItems.reduce<Record<string, { nome: string; itens: MixedRepasse[] }>>(
     (acc, r) => {
-      if (!acc[r.stripe_account_id]) acc[r.stripe_account_id] = { nome: r.conta_nome, repasses: [] };
-      acc[r.stripe_account_id].repasses.push(r);
+      if (!acc[r.stripe_account_id]) acc[r.stripe_account_id] = { nome: r.conta_nome, itens: [] };
+      acc[r.stripe_account_id].itens.push(r);
       return acc;
     },
     {},
@@ -1376,25 +1397,15 @@ function RepassesSection() {
     if (s === "pending")    return { label: "⏱ Agendado",   cls: "bg-amber-100 text-amber-800" };
     if (s === "failed")     return { label: "✕ Falhou",     cls: "bg-red-100 text-red-700" };
     if (s === "canceled")   return { label: "Cancelado",    cls: "bg-gray-100 text-gray-600" };
+    if (s === "previsto")   return { label: "⏳ Previsto",  cls: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" };
     return { label: s, cls: "bg-secondary text-muted-foreground" };
   };
 
   const fmtDate = (d: string) =>
     new Date(d + "T12:00:00Z").toLocaleDateString("pt-BR");
 
-  const totalRepasses  = repasses.reduce((a, r) => a + r.valor, 0);
-  const totalPrevisoes = previsoes.reduce((a, p) => a + p.valor, 0);
-  const totalGeral     = totalRepasses + totalPrevisoes;
-
-  // Agrupa previsões por conta
-  const previsoesporConta = previsoes.reduce<Record<string, { nome: string; itens: PrevisaoRepasse[] }>>(
-    (acc, p) => {
-      if (!acc[p.stripe_account_id]) acc[p.stripe_account_id] = { nome: p.conta_nome, itens: [] };
-      acc[p.stripe_account_id].itens.push(p);
-      return acc;
-    },
-    {},
-  );
+  // O total geral exibe apenas os repasses reais (exclui previsões)
+  const totalGeral = repasses.reduce((a, r) => a + r.valor, 0);
 
   return (
     <section className="space-y-6">
@@ -1413,15 +1424,10 @@ function RepassesSection() {
         </div>
         {(repasses.length > 0 || previsoes.length > 0) && (
           <div className="text-right">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">Total geral (reais)</p>
             <p className="font-serif text-2xl font-semibold text-foreground">
               {totalGeral.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </p>
-            {totalPrevisoes > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                inclui {totalPrevisoes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} previstos
-              </p>
-            )}
           </div>
         )}
       </div>
@@ -1490,14 +1496,14 @@ function RepassesSection() {
       {/* Tabela de repasses */}
       {loading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Carregando…</p>
-      ) : repasses.length === 0 ? (
+      ) : allItems.length === 0 ? (
         <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           Nenhum repasse encontrado. Selecione contas acima e clique em &quot;Buscar repasses&quot; para atualizar.
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(porConta).map(([contaId, { nome, repasses: lista }]) => {
-            const totalConta = lista.reduce((a, r) => a + r.valor, 0);
+          {Object.entries(porConta).map(([contaId, { nome, itens }]) => {
+            const totalConta = itens.reduce((a, r) => a + r.valor, 0);
             return (
               <div key={contaId} className="overflow-hidden rounded-xl border border-border bg-card">
                 <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-4 py-3">
@@ -1510,20 +1516,32 @@ function RepassesSection() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <th className="px-4 py-2 text-left">Data do repasse</th>
+                        <th className="px-4 py-2 text-left">Chegada / Previsão</th>
                         <th className="px-4 py-2 text-right">Valor</th>
                         <th className="px-4 py-2 text-left">Status</th>
                         <th className="px-4 py-2 text-left">Criado em</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {lista.map((r) => {
+                      {itens.map((r) => {
                         const { label, cls } = statusLabel(r.status);
                         return (
-                          <tr key={r.payout_id} className="hover:bg-accent/40">
-                            <td className="px-4 py-2.5 font-medium text-foreground">{fmtDate(r.arrival_date)}</td>
-                            <td className="px-4 py-2.5 text-right font-semibold text-foreground">
+                          <tr key={r.id} className="hover:bg-muted/50 transition-colors">
+                            <td className="px-4 py-2.5 text-foreground">
+                              {r.isPrevisao && r.pago_em ? (
+                                <span className="text-muted-foreground text-[10px] block font-medium">
+                                  PAGO EM {fmtDate(r.pago_em)}
+                                </span>
+                              ) : null}
+                              {fmtDate(r.arrival_date)}
+                            </td>
+                            <td className="px-4 py-2.5 font-medium text-foreground">
                               {r.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                              {r.isPrevisao && r.qtd_boletos && (
+                                <span className="text-muted-foreground text-[10px] ml-2 font-normal">
+                                  ({r.qtd_boletos} boletos)
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-2.5">
                               <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
@@ -1531,7 +1549,7 @@ function RepassesSection() {
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                              {new Date(r.criado_em_stripe).toLocaleDateString("pt-BR")}
+                              {r.isPrevisao ? "—" : new Date(r.criado_em_stripe).toLocaleDateString("pt-BR")}
                             </td>
                           </tr>
                         );

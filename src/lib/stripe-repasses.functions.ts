@@ -192,34 +192,23 @@ export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Busca boletos pagos nos últimos 7 dias com conta stripe
-    const desde = new Date();
-    desde.setDate(desde.getDate() - 7);
-    const desdeIso = desde.toISOString();
+    // Busca APENAS boletos pagos HOJE
+    // O usuário pediu para que amanhã as previsões de hoje sumam e entrem apenas as de amanhã.
+    const hojeData = new Date();
+    // Ajusta para fuso do Brasil (opcional) ou pega UTC mesmo
+    const hojeIso = hojeData.toISOString().slice(0, 10);
+    const inicioDoDia = `${hojeIso}T00:00:00Z`;
 
     const { data: boletos, error } = await supabaseAdmin
       .from("boletos_gerados")
       .select("stripe_account_id, valor, pago_em, stripe_accounts(nome)")
       .eq("pago", true)
       .not("pago_em", "is", null)
-      .gte("pago_em", desdeIso)
+      .gte("pago_em", inicioDoDia)
       .not("stripe_account_id", "is", null);
 
     if (error || !boletos || boletos.length === 0) {
       return { previsoes: [] as PrevisaoRepasse[] };
-    }
-
-    // Busca a data do último repasse (payout) gerado por conta
-    const { data: repasses } = await supabaseAdmin
-      .from("stripe_repasses")
-      .select("stripe_account_id, criado_em_stripe");
-
-    const ultimoRepasse = new Map<string, string>();
-    for (const r of repasses ?? []) {
-      const atual = ultimoRepasse.get(r.stripe_account_id);
-      if (!atual || r.criado_em_stripe > atual) {
-        ultimoRepasse.set(r.stripe_account_id, r.criado_em_stripe);
-      }
     }
 
     // Adiciona N dias úteis (pula sábado e domingo)
@@ -238,11 +227,6 @@ export const listarPrevisoesRepasses = createServerFn({ method: "POST" })
     const grupos = new Map<string, PrevisaoRepasse>();
     for (const b of boletos) {
       const acc = b as any;
-      
-      // Se o boleto foi pago ANTES do último repasse dessa conta ter sido criado,
-      // significa que esse valor já entrou naquele repasse real. Não prever mais.
-      const maxRepasse = ultimoRepasse.get(acc.stripe_account_id);
-      if (maxRepasse && acc.pago_em <= maxRepasse) continue;
 
       const pagoEm = (acc.pago_em as string).slice(0, 10);
       const key = `${acc.stripe_account_id}__${pagoEm}`;
