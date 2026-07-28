@@ -1563,64 +1563,6 @@ function RepassesSection() {
         </div>
       )}
 
-      {/* ── Previsões de repasse ── */}
-      {previsoes.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            📅 Previsões de repasse
-            <span className="text-xs font-normal text-muted-foreground">(boletos pagos recentemente — estimativa +2 dias úteis)</span>
-          </h3>
-          {Object.entries(previsoesporConta).map(([contaId, { nome, itens }]) => {
-            const totalConta = itens.reduce((a, p) => a + p.valor, 0);
-            return (
-              <div key={contaId} className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800">
-                <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800 px-4 py-3">
-                  <span className="text-sm font-semibold text-foreground">{nome}</span>
-                  <span className="text-sm font-semibold text-foreground">
-                    {totalConta.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-amber-200 dark:border-amber-800 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        <th className="px-4 py-2 text-left">Pago em</th>
-                        <th className="px-4 py-2 text-left">Previsão repasse</th>
-                        <th className="px-4 py-2 text-right">Valor</th>
-                        <th className="px-4 py-2 text-left">Boletos</th>
-                        <th className="px-4 py-2 text-left">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-amber-100 dark:divide-amber-900">
-                      {itens.map((p) => (
-                        <tr key={`${p.stripe_account_id}-${p.pago_em}`} className="hover:bg-amber-100/50 dark:hover:bg-amber-900/20">
-                          <td className="px-4 py-2.5 text-foreground">
-                            {new Date(p.pago_em + "T12:00:00Z").toLocaleDateString("pt-BR")}
-                          </td>
-                          <td className="px-4 py-2.5 font-medium text-foreground">
-                            {new Date(p.previsao_data + "T12:00:00Z").toLocaleDateString("pt-BR")}
-                          </td>
-                          <td className="px-4 py-2.5 text-right font-semibold text-foreground">
-                            {p.valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                          </td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">
-                            {p.qtd_boletos} boleto(s)
-                          </td>
-                          <td className="px-4 py-2.5">
-                            <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                              ⏳ Previsto
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </section>
   );
 }
