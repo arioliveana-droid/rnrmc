@@ -2,7 +2,7 @@
 // Baseado no fluxo Python validado: cria Customer com tax_id_data br_cpf,
 // depois PaymentIntent com customer.id + payment_method_data boleto.
 
-import { parseProxyUrl, proxyFetch, type ProxyConfig } from "./proxy-fetch.server";
+import { parseProxyUrl, proxyFetch, proxyFetchWithFallback, type ProxyConfig } from "./proxy-fetch.server";
 
 export type StripeBoletoResult =
   | {
@@ -17,7 +17,7 @@ export type StripeBoletoResult =
 
 const STRIPE_API = "https://api.stripe.com/v1";
 
-const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
+
 
 // CEPs válidos (BH, Juiz de Fora, SP, RJ, Guarulhos)
 const CEPS = [
@@ -68,6 +68,13 @@ async function stripeRequest(
     try { json = JSON.parse(r.text); } catch { /* */ }
     return { status: r.status, ok: r.status >= 200 && r.status < 300, json, text: r.text };
   }
+  // Sem proxy customizado: usa fallback automático
+  {
+    const r = await proxyFetchWithFallback(url, { method: "POST", headers, body });
+    let json: any = null;
+    try { json = JSON.parse(r.text); } catch { /* */ }
+    return { status: r.status, ok: r.status >= 200 && r.status < 300, json, text: r.text };
+  }
 
   const res = await fetch(url, { method: "POST", headers, body });
   const text = await res.text();
@@ -96,7 +103,7 @@ export async function emitirBoletoStripe(args: {
   const cpf = args.cpf.replace(/\D/g, "");
   if (cpf.length !== 11) return { ok: false, error: `CPF inválido (${cpf.length} dígitos)` };
 
-  const proxy = parseProxyUrl(args.proxyUrl || DEFAULT_PROXY);
+  const proxy = args.proxyUrl ? parseProxyUrl(args.proxyUrl) : null;
 
   const nomeLimpo = args.nome.trim().replace(/\s+/g, " ");
   const nomeFinal = nomeLimpo.includes(" ") ? nomeLimpo : `${nomeLimpo} Silva`;

@@ -4,7 +4,7 @@
 // Limite de 2 trocas de nome por dia por conta.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
+import { parseProxyUrl, proxyFetch, proxyFetchWithFallback } from "./proxy-fetch.server";
 
 export const WINDOW_MINUTES = 20;
 export const WINDOW_MAX_BOLETOS = 12;
@@ -115,8 +115,7 @@ async function callStripeUpdatePerson(
   }
 
   const headers = stripeHeaders(acc);
-  const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
-  const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
+  const proxy = acc.proxy_url ? parseProxyUrl(acc.proxy_url) : null;
   const MAX_ATTEMPTS = 3;
   const errors: string[] = [];
   if (proxy) {
@@ -143,16 +142,21 @@ async function callStripeUpdatePerson(
     }
     return { ok: false, error: errors.join(" | ") };
   }
-  try {
-    const res = await fetch(url, { method: "POST", headers, body });
-    if (!res.ok) {
-      const txt = await res.text();
-      return { ok: false, error: `HTTP ${res.status}: ${txt.slice(0, 300)}` };
+  // Sem proxy customizado: usa fallback automático com contingência
+  const MAX_ATTEMPTS2 = 3;
+  const errors2: string[] = [];
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS2; attempt++) {
+    try {
+      const r = await proxyFetchWithFallback(url, { method: "POST", headers, body });
+      if (r.status >= 200 && r.status < 300) return { ok: true };
+      errors2.push(`tentativa ${attempt}: HTTP ${r.status}: ${r.text.slice(0, 200)}`);
+      if (r.status >= 400 && r.status < 500 && r.status !== 408 && r.status !== 429) break;
+    } catch (e) {
+      errors2.push(`tentativa ${attempt}: ${e instanceof Error ? e.message : String(e)}`);
     }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    if (attempt < MAX_ATTEMPTS2) await new Promise((res) => setTimeout(res, 500 * attempt));
   }
+  return { ok: false, error: errors2.join(" | ") };
 }
 
 // Faz reset do contador diário em contas cuja dia_referencia ficou pra trás.
@@ -270,8 +274,7 @@ async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<numbe
     pendentes.map((b) => [b.stripe_payment_intent_id as string, b.id]),
   );
 
-  const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
-  const proxy = parseProxyUrl(acc.proxy_url || DEFAULT_PROXY);
+  const proxy = acc.proxy_url ? parseProxyUrl(acc.proxy_url) : null;
   const headers = {
     Authorization: `Bearer ${acc.token}`,
     "Stripe-Version": "2023-10-16",
@@ -294,8 +297,8 @@ async function pollPaymentStatusForAccount(acc: StripeAccountRow): Promise<numbe
         const r = await proxyFetch(url, { method: "GET", headers }, proxy);
         if (r.status === 200) listJson = JSON.parse(r.text);
       } else {
-        const res = await fetch(url, { headers });
-        if (res.ok) listJson = await res.json();
+        const r = await proxyFetchWithFallback(url, { method: "GET", headers });
+        if (r.status === 200) listJson = JSON.parse(r.text);
       }
       if (!listJson) break;
 

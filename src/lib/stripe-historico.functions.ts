@@ -4,7 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
+import { parseProxyUrl, proxyFetch, proxyFetchWithFallback } from "./proxy-fetch.server";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tipos
@@ -32,7 +32,7 @@ export type TransacaoStripe = {
 // Helper: pagina todos os PaymentIntents de uma conta Stripe no período
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
+
 
 async function fetchAllPIsForAccount(
   token: string,
@@ -57,7 +57,7 @@ async function fetchAllPIsForAccount(
       Authorization: `Bearer ${token}`,
       "Stripe-Version": "2023-10-16",
     };
-    const proxy = parseProxyUrl(proxyUrl || DEFAULT_PROXY);
+    const proxy = proxyUrl ? parseProxyUrl(proxyUrl) : null;
 
     try {
       let resStatus: number;
@@ -68,9 +68,9 @@ async function fetchAllPIsForAccount(
         resStatus = r.status;
         resText = r.text;
       } else {
-        const res = await fetch(url, { headers });
-        resStatus = res.status;
-        resText = await res.text();
+        const r = await proxyFetchWithFallback(url, { method: "GET", headers });
+        resStatus = r.status;
+        resText = r.text;
       }
 
       if (resStatus === 429) {

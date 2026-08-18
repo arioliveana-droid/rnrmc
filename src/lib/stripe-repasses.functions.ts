@@ -3,9 +3,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { parseProxyUrl, proxyFetch } from "./proxy-fetch.server";
+import { parseProxyUrl, proxyFetch, proxyFetchWithFallback } from "./proxy-fetch.server";
 
-const DEFAULT_PROXY = "http://smart-pcqvtsl0pvll:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
+
 
 export type Repasse = {
   id: string;
@@ -23,7 +23,7 @@ async function fetchPayoutsForAccount(
   token: string,
   proxyUrl: string | null,
 ): Promise<{ data: any[]; error?: string }> {
-  const proxy = parseProxyUrl(proxyUrl || DEFAULT_PROXY);
+  const proxy = proxyUrl ? parseProxyUrl(proxyUrl) : null;
   const url = "https://api.stripe.com/v1/payouts?limit=100&expand[]=data.destination";
   const headers = {
     Authorization: `Bearer ${token}`,
@@ -37,9 +37,9 @@ async function fetchPayoutsForAccount(
       const json = JSON.parse(r.text) as { data: any[] };
       return { data: json.data ?? [] };
     }
-    const res = await fetch(url, { headers });
-    if (!res.ok) return { data: [], error: `HTTP ${res.status}` };
-    const json = await res.json() as { data: any[] };
+    const r = await proxyFetchWithFallback(url, { method: "GET", headers });
+    if (r.status !== 200) return { data: [], error: `HTTP ${r.status}` };
+    const json = JSON.parse(r.text) as { data: any[] };
     return { data: json.data ?? [] };
   } catch (e) {
     return { data: [], error: String(e) };

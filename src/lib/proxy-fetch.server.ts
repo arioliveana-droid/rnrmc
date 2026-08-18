@@ -242,3 +242,49 @@ export async function proxyFetch(
 
   return { status, headers: respHeaders, text: bodyText };
 }
+
+// ─── Proxies com contingência ────────────────────────────────────────────────
+// Proxy principal: smart-pcqvtsl0pvll com geo Brasil
+// Proxy fallback:  smart-admin22 com geo Brasil (sem geo se falhar)
+export const PROXY_PRIMARY = "http://smart-pcqvtsl0pvll_area-BR:5lLNTXySrs13Dav7@proxy.smartproxy.net:3120";
+export const PROXY_FALLBACK = "http://smart-admin22_area-BR:57475747Aa@proxy.smartproxy.net:3120";
+export const PROXY_FALLBACK_NOGEO = "http://smart-admin22:57475747Aa@proxy.smartproxy.net:3120";
+
+/**
+ * Faz a requisição tentando o proxy principal primeiro.
+ * Se falhar (erro de conexão ou auth), tenta o fallback com BR.
+ * Se o fallback BR também falhar, tenta sem geo como último recurso.
+ */
+export async function proxyFetchWithFallback(
+  targetUrl: string,
+  init: { method?: string; headers?: Record<string, string>; body?: string },
+  customProxyUrl?: string | null,
+): Promise<ProxyFetchResult> {
+  // Se a conta tiver proxy customizado, usa ele direto
+  if (customProxyUrl) {
+    const p = parseProxyUrl(customProxyUrl);
+    if (p) return proxyFetch(targetUrl, init, p);
+  }
+
+  const proxies = [PROXY_PRIMARY, PROXY_FALLBACK, PROXY_FALLBACK_NOGEO];
+  let lastError: Error | null = null;
+
+  for (const proxyUrl of proxies) {
+    const p = parseProxyUrl(proxyUrl);
+    if (!p) continue;
+    try {
+      const result = await proxyFetch(targetUrl, init, p);
+      // Considera auth fail (407) como falha → tenta próximo
+      if (result.status === 407) {
+        lastError = new Error(`Proxy auth failed (407): ${proxyUrl}`);
+        continue;
+      }
+      return result;
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      // Tenta o próximo proxy
+    }
+  }
+
+  throw lastError ?? new Error("Todos os proxies falharam");
+}
