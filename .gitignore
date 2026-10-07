@@ -62,5 +62,5 @@ all_migrations.sql
 combine_sql.py
 dl_logo.js
 get_b64.py
-package-lock.json
+
 *.py
