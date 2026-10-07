@@ -114,11 +114,18 @@ export const buscarEsalvarRepasses = createServerFn({ method: "POST" })
 
 /**
  * Lista todos os repasses salvos no banco, agrupados por conta.
+ * Regras de exibição:
+ *  - paid / canceled → nunca exibe (já liquidados)
+ *  - failed          → exibe só se atualizado nas últimas 48h
+ *  - in_transit / pending / outros → sempre exibe
  */
 export const listarRepasses = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Limite de 48h para falhas
+    const limite48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await supabaseAdmin
       .from("stripe_repasses")
@@ -132,17 +139,23 @@ export const listarRepasses = createServerFn({ method: "POST" })
       return { repasses: [] as Repasse[] };
     }
 
-    const repasses: Repasse[] = (data ?? []).map((r: any) => ({
-      id: r.id,
-      stripe_account_id: r.stripe_account_id,
-      conta_nome: r.stripe_accounts?.nome ?? "—",
-      payout_id: r.payout_id,
-      valor: Number(r.valor),
-      arrival_date: r.arrival_date,
-      status: r.status,
-      criado_em_stripe: r.criado_em_stripe,
-      atualizado_em: r.atualizado_em,
-    }));
+    const repasses: Repasse[] = (data ?? [])
+      // Exclui falhas com mais de 48h — in_transit/pending passam sempre
+      .filter((r: any) => {
+        if (r.status !== "failed") return true;
+        return r.atualizado_em >= limite48h;
+      })
+      .map((r: any) => ({
+        id: r.id,
+        stripe_account_id: r.stripe_account_id,
+        conta_nome: r.stripe_accounts?.nome ?? "—",
+        payout_id: r.payout_id,
+        valor: Number(r.valor),
+        arrival_date: r.arrival_date,
+        status: r.status,
+        criado_em_stripe: r.criado_em_stripe,
+        atualizado_em: r.atualizado_em,
+      }));
 
     return { repasses };
   });
