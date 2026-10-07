@@ -124,8 +124,10 @@ export const listarRepasses = createServerFn({ method: "POST" })
   .handler(async () => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Limite de 48h para falhas
-    const limite48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    // Limite de 2 dias para falhas: usa arrival_date pois atualizado_em de falhas antigas
+    // nunca é renovado (a Stripe não as retorna mais na listagem).
+    const agora = new Date();
+    const limite2dias = new Date(agora.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const { data, error } = await supabaseAdmin
       .from("stripe_repasses")
@@ -143,7 +145,8 @@ export const listarRepasses = createServerFn({ method: "POST" })
       // Exclui falhas com mais de 48h — in_transit/pending passam sempre
       .filter((r: any) => {
         if (r.status !== "failed") return true;
-        return r.atualizado_em >= limite48h;
+        // Exibe falha só se a arrival_date for dos últimos 2 dias
+        return r.arrival_date >= limite2dias;
       })
       .map((r: any) => ({
         id: r.id,
