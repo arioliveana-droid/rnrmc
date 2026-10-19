@@ -143,7 +143,7 @@ function AdminPage() {
               Painel admin
             </div>
             <h1 className="font-serif text-lg font-semibold text-foreground md:text-xl">
-              CRM-MG · Operações
+              CRM-ES · Operações
             </h1>
           </div>
           <button
@@ -1796,7 +1796,7 @@ function BoletosSection() {
       </div>
 
       {loadError && (
-        <div className="mt-4 rounded-lg border border-crm-red/30 bg-crm-red/5 px-4 py-3 text-sm text-crm-red-dark">
+        <div className="mt-4 rounded-lg border border-crm-red/30 bg-crm-green/5 px-4 py-3 text-sm text-crm-green-dark">
           <strong>Erro ao carregar boletos:</strong> {loadError}
         </div>
       )}

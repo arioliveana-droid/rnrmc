@@ -18,14 +18,14 @@ export function Hero() {
               Compromisso com a <span className="text-crm-green">ética médica</span>.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:mt-6 md:text-lg">
-              Garanta sua regularidade profissional no CRM-MG para 2026. Pague à vista com até 15% de
+              Garanta sua regularidade profissional no CRM-ES para 2026. Pague à vista com até 15% de
               desconto ou parcele em até 5x sem juros.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
               <a
                 href="#pagar"
-                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-crm-red px-6 py-3 text-base font-semibold text-primary-foreground shadow-elevated transition hover:-translate-y-0.5 hover:bg-crm-red-dark md:px-8 md:py-4"
+                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-crm-green px-6 py-3 text-base font-semibold text-primary-foreground shadow-elevated transition hover:-translate-y-0.5 hover:bg-crm-green-dark md:px-8 md:py-4"
               >
                 Emitir guia de pagamento
               </a>
@@ -54,7 +54,7 @@ export function Hero() {
             <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-crm-green/10 blur-3xl md:-right-20 md:-top-20 md:h-64 md:w-64" />
             <img
               src={doctor}
-              alt="Médica do CRM-MG"
+              alt="Médica do CRM-ES"
               width={1024}
               height={1024}
               className="relative z-10 aspect-square w-full rounded-2xl object-cover shadow-elevated ring-1 ring-border md:rounded-3xl"
@@ -63,7 +63,7 @@ export function Hero() {
               <div className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground md:text-xs">
                 Desconto máximo
               </div>
-              <div className="mt-1 text-3xl font-bold text-crm-red md:text-4xl">15% OFF</div>
+              <div className="mt-1 text-3xl font-bold text-crm-green md:text-4xl">15% OFF</div>
               <div className="mt-1 text-[11px] text-muted-foreground md:text-xs">
                 Até 31 de janeiro
               </div>

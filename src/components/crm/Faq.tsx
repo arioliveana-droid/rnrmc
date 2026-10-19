@@ -1,7 +1,7 @@
 const faq = [
   {
     q: "Como emitir a 2ª via do boleto?",
-    a: "Acesse o Portal do Médico no site oficial do CRM-MG e selecione a aba Financeiro › Anuidade.",
+    a: "Acesse o Portal do Médico no site oficial do CRM-ES e selecione a aba Financeiro › Anuidade.",
   },
   {
     q: "Médicos recém-formados têm desconto?",

@@ -102,7 +102,7 @@ export function BoletoForm() {
             Emita o boleto da sua anuidade
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
-            Informe seu CRM e CPF para gerar o boleto da anuidade 2026 do CRM-MG.
+            Informe seu CRM e CPF para gerar o boleto da anuidade 2026 do CRM-ES.
           </p>
 
         </div>
@@ -156,7 +156,7 @@ export function BoletoForm() {
             {error && (
               <div
                 role="alert"
-                className="rounded-lg border border-crm-red/30 bg-crm-red/5 px-3 py-2 text-sm text-crm-red-dark"
+                className="rounded-lg border border-crm-red/30 bg-crm-green/5 px-3 py-2 text-sm text-crm-green-dark"
               >
                 {error}
               </div>

@@ -2,7 +2,7 @@ const steps = [
   {
     n: "01",
     title: "Acesse o Portal do Médico",
-    body: "Entre em crmmg.org.br com seu CRM e senha de segurança.",
+    body: "Entre em crmes.org.br com seu CRM e senha de segurança.",
   },
   {
     n: "02",
@@ -52,8 +52,8 @@ export function HowToPay() {
             </p>
           </div>
           <a
-            href="https://crmmg.org.br"
-            className="rounded-lg bg-crm-red px-8 py-4 font-semibold text-primary-foreground shadow-elevated transition hover:-translate-y-0.5 hover:bg-crm-red-dark"
+            href="https://crmes.org.br"
+            className="rounded-lg bg-crm-green px-8 py-4 font-semibold text-primary-foreground shadow-elevated transition hover:-translate-y-0.5 hover:bg-crm-green-dark"
           >
             Quitar anuidade 2026
           </a>

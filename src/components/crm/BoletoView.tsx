@@ -199,7 +199,7 @@ export function BoletoView({
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">
-                  CRM-MG · Anuidade 2026
+                  CRM-ES · Anuidade 2026
                 </div>
                 <div className="truncate text-[11px] text-white/70">
                   Conselho Regional de Medicina/MG
@@ -318,7 +318,7 @@ export function BoletoView({
                 </div>
                 <div>
                   <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Beneficiário</div>
-                  <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-MG</div>
+                  <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-ES</div>
                 </div>
                 <div>
                   <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">CNPJ</div>
@@ -340,10 +340,10 @@ export function BoletoView({
           
           <div className="mb-4 flex items-center justify-between rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
             <div className="flex items-center gap-4">
-              <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "48px", width: "140px", objectFit: "contain", display: "block" }} />
+              <img src="/CRM-ES-logo.png" alt="CRM-ES" style={{ height: "48px", width: "140px", objectFit: "contain", display: "block" }} />
               <div className="min-w-0">
                 <div className="text-sm font-bold text-foreground">
-                  CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS
+                  CONSELHO REGIONAL DE MEDICINA DO ESTADO DE Espírito Santo
                 </div>
                 <div className="text-xs text-muted-foreground">
                   CNPJ 17.218.964/0001-30 · Rua dos Timbiras, 1.200 — Funcionários · Belo Horizonte/MG
@@ -360,7 +360,7 @@ export function BoletoView({
                   <tr>
                     <td colSpan={2} className="border-b border-black p-2">
                       <div className="flex items-center justify-between">
-                        <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
+                        <img src="/CRM-ES-logo.png" alt="CRM-ES" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
                         <div className="text-sm font-bold tracking-widest">{linhaFormatada}</div>
                       </div>
                     </td>
@@ -368,7 +368,7 @@ export function BoletoView({
                   <tr>
                     <td className="border-b border-r border-black p-1 align-top w-2/3">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
-                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS</div>
+                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE Espírito Santo</div>
                     </td>
                     <td className="border-b border-black p-1 align-top w-1/3">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
@@ -421,7 +421,7 @@ export function BoletoView({
                     <td colSpan={7} className="border-b-2 border-black p-2">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 border-r-2 border-black pr-2">
-                          <img src="/crm-mg-logo.png" alt="CRM-MG" style={{ height: "30px", width: "90px", objectFit: "contain", display: "block" }} />
+                          <img src="/CRM-ES-logo.png" alt="CRM-ES" style={{ height: "30px", width: "90px", objectFit: "contain", display: "block" }} />
                         </div>
                         <div className="flex-shrink-0 border-r-2 border-black px-2 text-lg font-bold">
                           {dadosLinha.banco.codigo}
@@ -445,7 +445,7 @@ export function BoletoView({
                   <tr>
                     <td colSpan={5} className="border-b border-r border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
-                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE MINAS GERAIS</div>
+                      <div className="font-semibold mt-0.5">CONSELHO REGIONAL DE MEDICINA DO ESTADO DE Espírito Santo</div>
                     </td>
                     <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
@@ -506,7 +506,7 @@ export function BoletoView({
                       <div className="mt-1 text-xs">
                         - Referente à <strong>{debito.descricao}</strong>.<br/>
                         - Não receber após o vencimento.<br/>
-                        - Em caso de dúvida, contatar a Tesouraria do CRM-MG.
+                        - Em caso de dúvida, contatar a Tesouraria do CRM-ES.
                       </div>
                     </td>
                     <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
