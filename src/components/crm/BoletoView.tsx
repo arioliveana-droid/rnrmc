@@ -202,7 +202,7 @@ export function BoletoView({
                   CRM-ES · Anuidade 2026
                 </div>
                 <div className="truncate text-[11px] text-white/70">
-                  Conselho Regional de Medicina/MG
+                  Conselho Regional de Medicina/ES
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export function BoletoView({
                 {debito.nome}
               </div>
               <div className="text-xs text-muted-foreground">
-                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/MG
+                CPF {fmtCPF(debito.cpf)} · CRM debito.crm/ES
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-neutral-200 pt-3">
@@ -346,7 +346,7 @@ export function BoletoView({
                   CONSELHO REGIONAL DE MEDICINA DO ESTADO DE Espírito Santo
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  CNPJ 17.218.964/0001-30 · Rua dos Timbiras, 1.200 — Funcionários · Belo Horizonte/MG
+                  CNPJ 27.472.242/0001-02 · Av. Marechal Mascarenhas de Moraes, 2399 — Bento Ferreira · Vitória/ES
                 </div>
               </div>
             </div>
@@ -379,7 +379,7 @@ export function BoletoView({
                     <td className="border-b border-r border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
                       <div className="font-semibold mt-0.5">{debito.nome}</div>
-                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/MG</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/ES</div>
                     </td>
                     <td className="border-b border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Vencimento</div>
@@ -536,7 +536,7 @@ export function BoletoView({
                     <td colSpan={7} className="border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
                       <div className="font-semibold mt-0.5">{debito.nome}</div>
-                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/MG</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/ES</div>
                     </td>
                   </tr>
                 </tbody>

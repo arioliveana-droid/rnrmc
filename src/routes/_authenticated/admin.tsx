@@ -707,7 +707,7 @@ function ConsultasSection() {
                         }`}
                       />
                       <span className="truncate">
-                        {c.nome ?? `CRM ${c.crm}/MG`}
+                        {c.nome ?? `CRM ${c.crm}/ES`}
                       </span>
                     </div>
                     <div className="mt-0.5 text-xs text-muted-foreground">

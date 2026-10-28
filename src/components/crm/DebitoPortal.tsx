@@ -194,7 +194,7 @@ export function DebitoPortal({
                 <div className="text-xs font-semibold leading-tight text-foreground">
                   {nomeFormatado(debito.nome)}
                 </div>
-                <div className="text-[10px] text-muted-foreground">CRM {debito.crm}/MG</div>
+                <div className="text-[10px] text-muted-foreground">CRM debito.crm/ES</div>
               </div>
             </div>
           </div>
@@ -213,7 +213,7 @@ export function DebitoPortal({
                 Dr(a). {nomeFormatado(debito.nome)}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                CRM {debito.crm}/MG
+                CRM debito.crm/ES
               </p>
             </div>
             <div className="text-left md:text-right">
