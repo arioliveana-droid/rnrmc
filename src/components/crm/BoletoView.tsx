@@ -304,7 +304,7 @@ export function BoletoView({
                 {debito.nome}
               </div>
               <div className="text-xs text-muted-foreground">
-                CPF {fmtCPF(debito.cpf)} · CRM debito.crm/ES
+                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/ES
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-neutral-200 pt-3">
