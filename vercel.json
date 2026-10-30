@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/public/hooks/stripe-tick",
-      "schedule": "* * * * *"
-    }
-  ]
-}
+{}
