@@ -475,7 +475,7 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
           cpf,
           crm,
           codigo: crm || null,
-          status: "INADIMPLENTE",
+          status: "POSITIVO",
           debito_codigo: "A26",
           descricao: "ANUIDADE 2026",
           valor: 902.0,
