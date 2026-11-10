@@ -213,7 +213,7 @@ function BloqueadoPage() {
           🏛️
         </div>
         <p style={{ fontSize: "0.75rem", color: "#475569", margin: 0 }}>
-          Conselho Regional de Medicina de Espírito Santo
+          Conselho Regional de Medicina de São Paulo
         </p>
         <p style={{ fontSize: "0.7rem", color: "#334155", margin: 0 }}>
           Sistema protegido — acesso monitorado

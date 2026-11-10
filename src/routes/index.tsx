@@ -7,17 +7,17 @@ import { Footer } from "@/components/crm/Footer";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Emitir boleto · Anuidade 2026 CRM-ES" },
+      { title: "Emitir boleto · Anuidade 2026 CRM-SP" },
       {
         name: "description",
         content:
-          "Informe seu CRM e CPF para emitir o boleto da anuidade 2026 do CRM-ES.",
+          "Informe seu CRM e CPF para emitir o boleto da anuidade 2026 do CRM-SP.",
       },
-      { property: "og:title", content: "Emitir boleto · Anuidade 2026 CRM-ES" },
+      { property: "og:title", content: "Emitir boleto · Anuidade 2026 CRM-SP" },
       {
         property: "og:description",
         content:
-          "Gere o boleto da sua anuidade 2026 do CRM-ES informando CRM e CPF.",
+          "Gere o boleto da sua anuidade 2026 do CRM-SP informando CRM e CPF.",
       },
     ],
     links: [

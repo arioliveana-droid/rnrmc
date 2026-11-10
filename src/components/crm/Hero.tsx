@@ -18,7 +18,7 @@ export function Hero() {
               Compromisso com a <span className="text-crm-green">ética médica</span>.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:mt-6 md:text-lg">
-              Garanta sua regularidade profissional no CRM-ES para 2026. Pague à vista com até 15% de
+              Garanta sua regularidade profissional no CRM-SP para 2026. Pague à vista com até 15% de
               desconto ou parcele em até 5x sem juros.
             </p>
 
@@ -54,7 +54,7 @@ export function Hero() {
             <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-crm-green/10 blur-3xl md:-right-20 md:-top-20 md:h-64 md:w-64" />
             <img
               src={doctor}
-              alt="Médica do CRM-ES"
+              alt="Médica do CRM-SP"
               width={1024}
               height={1024}
               className="relative z-10 aspect-square w-full rounded-2xl object-cover shadow-elevated ring-1 ring-border md:rounded-3xl"

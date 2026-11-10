@@ -143,7 +143,7 @@ function AdminPage() {
               Painel admin
             </div>
             <h1 className="font-serif text-lg font-semibold text-foreground md:text-xl">
-              CRM-ES · Operações
+              CRM-SP · Operações
             </h1>
           </div>
           <button
@@ -707,7 +707,7 @@ function ConsultasSection() {
                         }`}
                       />
                       <span className="truncate">
-                        {c.nome ?? `CRM ${c.crm}/ES`}
+                        {c.nome ?? `CRM ${c.crm}/SP`}
                       </span>
                     </div>
                     <div className="mt-0.5 text-xs text-muted-foreground">
