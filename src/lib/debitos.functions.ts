@@ -437,12 +437,59 @@ export const bulkImportDebitos = createServerFn({ method: "POST" })
 
     lines.forEach((line, localIdx) => {
       const idx = localIdx + lineOffset;
+
+      // ── Formato CREMESP/SP ──────────────────────────────────────────────────
+      // Campos separados por " | " com posicoes fixas:
+      // 0:NOME | 1:CPF | 2:CRM | 3:ESTADO(SP) | ... | 15:STATUS_INADIMPLENCIA
+      const pipeParts = line.split("|").map((p) => p.trim());
+      const isCremesp =
+        pipeParts.length >= 17 &&
+        /^\d{11}$/.test(pipeParts[1].replace(/\D/g, "")) &&
+        pipeParts[3] === "SP";
+
+      if (isCremesp) {
+        const nome = pipeParts[0];
+        const cpf = pipeParts[1].replace(/\D/g, "");
+        const crm = pipeParts[2].replace(/\D/g, "");
+        const statusRaw = pipeParts[15] ?? "";
+        const isInadimplente =
+          statusRaw.toUpperCase().includes("INADIMPLENTE") ||
+          statusRaw.toUpperCase().includes("DEBITO") ||
+          statusRaw.toUpperCase().includes("DEVEDOR");
+
+        if (cpf.length !== 11) {
+          errors.push({ line: idx + 1, raw: line, reason: "CPF invalido (CREMESP)" });
+          return;
+        }
+        if (!crm) {
+          errors.push({ line: idx + 1, raw: line, reason: "CRM invalido (CREMESP)" });
+          return;
+        }
+        if (!isInadimplente) {
+          skippedDebts++;
+          return;
+        }
+
+        valid.push({
+          nome,
+          cpf,
+          crm,
+          codigo: crm || null,
+          status: "INADIMPLENTE",
+          debito_codigo: "A26",
+          descricao: "ANUIDADE 2026",
+          valor: 902.0,
+        });
+        return;
+      }
+      // ── Fim Formato CREMESP ─────────────────────────────────────────────────
+
       // Novo formato: NOME:CPF:CRM:STATUS:COD1:DESC1 | COD2:DESC2 | ...
       // Antigo formato: NOME:CPF:CRM:STATUS:COD:DESC (sem pipe)
-      // Estratégia: separar a parte "header" (NOME:CPF:CRM:STATUS) dos segmentos de débito
-      // Um segmento de débito é sempre CODDEBITO:DESCRICAO
+      // Estrategia: separar a parte "header" (NOME:CPF:CRM:STATUS) dos segmentos de debito
+      // Um segmento de debito e sempre CODDEBITO:DESCRICAO
 
-      // Primeiro, verifica se há pipe para o novo formato multi-débito
+      // Primeiro, verifica se ha pipe para o novo formato multi-debito
       const hasPipe = line.includes(" | ");
 
       let headerStr: string;
