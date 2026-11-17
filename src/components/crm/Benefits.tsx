@@ -9,7 +9,7 @@ const items = [
   },
   {
     title: "Educação médica continuada",
-    body: "Acesso gratuito a eventos, cursos e biblioteca digital do CRM-SP.",
+    body: "Acesso gratuito a eventos, cursos e biblioteca digital do CRM-RN.",
   },
   {
     title: "Fiscalização ética",

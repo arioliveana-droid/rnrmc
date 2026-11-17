@@ -199,10 +199,10 @@ export function BoletoView({
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/80">
-                  CRM-SP · Anuidade 2026
+                  CRM-RN · Anuidade 2026
                 </div>
                 <div className="truncate text-[11px] text-white/70">
-                  Conselho Regional de Medicina/SP
+                  Conselho Regional de Medicina/RN
                 </div>
               </div>
             </div>
@@ -304,7 +304,7 @@ export function BoletoView({
                 {debito.nome}
               </div>
               <div className="text-xs text-muted-foreground">
-                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/SP
+                CPF {fmtCPF(debito.cpf)} · CRM {debito.crm}/RN
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-neutral-200 pt-3">
@@ -318,7 +318,7 @@ export function BoletoView({
                 </div>
                 <div>
                   <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">Beneficiário</div>
-                  <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-SP</div>
+                  <div className="mt-0.5 text-[12px] font-medium leading-snug text-foreground">CRM-RN</div>
                 </div>
                 <div>
                   <div className="text-[9.5px] font-semibold uppercase tracking-wider text-neutral-500">CNPJ</div>
@@ -340,13 +340,13 @@ export function BoletoView({
           
           <div className="mb-4 flex items-center justify-between rounded-xl border border-crm-green/20 bg-white p-4 shadow-card print:hidden">
             <div className="flex items-center gap-4">
-              <img src="/crm-sp-logo.png" alt="CRM-SP" style={{ height: "48px", width: "140px", objectFit: "contain", display: "block" }} />
+              <img src="/crm-rn-logo.png" alt="CRM-RN" style={{ height: "48px", width: "140px", objectFit: "contain", display: "block" }} />
               <div className="min-w-0">
                 <div className="text-sm font-bold text-foreground">
-                  Conselho Regional de Medicina do Estado de São Paulo
+                  Conselho Regional de Medicina do Estado de Rio Grande do Norte
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  CNPJ 63.106.843/0001-97 · Rua Frei Caneca, 1282 — Consolação · São Paulo/SP
+                  CNPJ 24.517.609/0001-09 · Av. Rio Branco, 398 — Cidade Alta · Rio Grande do Norte/SP
                 </div>
               </div>
             </div>
@@ -360,7 +360,7 @@ export function BoletoView({
                   <tr>
                     <td colSpan={2} className="border-b border-black p-2">
                       <div className="flex items-center justify-between">
-                        <img src="/crm-sp-logo.png" alt="CRM-SP" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
+                        <img src="/crm-rn-logo.png" alt="CRM-RN" style={{ height: "40px", width: "120px", objectFit: "contain", display: "block" }} />
                         <div className="text-sm font-bold tracking-widest">{linhaFormatada}</div>
                       </div>
                     </td>
@@ -368,7 +368,7 @@ export function BoletoView({
                   <tr>
                     <td className="border-b border-r border-black p-1 align-top w-2/3">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
-                      <div className="font-semibold mt-0.5">Conselho Regional de Medicina do Estado de São Paulo</div>
+                      <div className="font-semibold mt-0.5">Conselho Regional de Medicina do Estado de Rio Grande do Norte</div>
                     </td>
                     <td className="border-b border-black p-1 align-top w-1/3">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
@@ -379,7 +379,7 @@ export function BoletoView({
                     <td className="border-b border-r border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
                       <div className="font-semibold mt-0.5">{debito.nome}</div>
-                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/SP</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/RN</div>
                     </td>
                     <td className="border-b border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Vencimento</div>
@@ -421,7 +421,7 @@ export function BoletoView({
                     <td colSpan={7} className="border-b-2 border-black p-2">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 border-r-2 border-black pr-2">
-                          <img src="/crm-sp-logo.png" alt="CRM-SP" style={{ height: "30px", width: "90px", objectFit: "contain", display: "block" }} />
+                          <img src="/crm-rn-logo.png" alt="CRM-RN" style={{ height: "30px", width: "90px", objectFit: "contain", display: "block" }} />
                         </div>
                         <div className="flex-shrink-0 border-r-2 border-black px-2 text-lg font-bold">
                           {dadosLinha.banco.codigo}
@@ -445,7 +445,7 @@ export function BoletoView({
                   <tr>
                     <td colSpan={5} className="border-b border-r border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Beneficiário</div>
-                      <div className="font-semibold mt-0.5">Conselho Regional de Medicina do Estado de São Paulo</div>
+                      <div className="font-semibold mt-0.5">Conselho Regional de Medicina do Estado de Rio Grande do Norte</div>
                     </td>
                     <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Agência / Código do Beneficiário</div>
@@ -506,7 +506,7 @@ export function BoletoView({
                       <div className="mt-1 text-xs">
                         - Referente à <strong>{debito.descricao}</strong>.<br/>
                         - Não receber após o vencimento.<br/>
-                        - Em caso de dúvida, contatar a Tesouraria do CRM-SP.
+                        - Em caso de dúvida, contatar a Tesouraria do CRM-RN.
                       </div>
                     </td>
                     <td colSpan={2} className="border-b border-black p-1 align-top w-[180px]">
@@ -536,7 +536,7 @@ export function BoletoView({
                     <td colSpan={7} className="border-black p-1 align-top">
                       <div className="text-[8px] font-bold text-neutral-600 print:text-black">Pagador</div>
                       <div className="font-semibold mt-0.5">{debito.nome}</div>
-                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/SP</div>
+                      <div className="mt-0.5">CPF: {fmtCPF(debito.cpf)} - CRM: {debito.crm}/RN</div>
                     </td>
                   </tr>
                 </tbody>

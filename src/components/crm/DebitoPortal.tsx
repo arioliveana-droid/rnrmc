@@ -109,7 +109,7 @@ export function DebitoPortal({
           </p>
           <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
             Caso tenha alguma dúvida sobre sua situação cadastral,
-            entre em contato com o CRM-SP.
+            entre em contato com o CRM-RN.
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function DebitoPortal({
                 Portal do Médico
               </div>
               <div className="text-xs text-muted-foreground">
-                CRM-SP · Conselho Regional de Medicina de São Paulo
+                CRM-RN · Conselho Regional de Medicina de Rio Grande do Norte
               </div>
             </div>
           </div>
@@ -194,7 +194,7 @@ export function DebitoPortal({
                 <div className="text-xs font-semibold leading-tight text-foreground">
                   {nomeFormatado(debito.nome)}
                 </div>
-                <div className="text-[10px] text-muted-foreground">CRM {debito.crm}/SP</div>
+                <div className="text-[10px] text-muted-foreground">CRM {debito.crm}/RN</div>
               </div>
             </div>
           </div>
@@ -207,13 +207,13 @@ export function DebitoPortal({
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Anuidade 2026 · CRM-SP
+                Anuidade 2026 · CRM-RN
               </p>
               <h1 className="mt-2 font-serif text-xl font-semibold leading-tight text-foreground md:text-3xl">
                 Dr(a). {nomeFormatado(debito.nome)}
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                CRM {debito.crm}/SP
+                CRM {debito.crm}/RN
               </p>
             </div>
             <div className="text-left md:text-right">

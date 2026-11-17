@@ -5,7 +5,7 @@ import { Menu, X } from "lucide-react";
 const links = [
   { href: "#emitir", label: "Emitir boleto" },
   { href: "#duvidas", label: "Dúvidas" },
-  { href: "https://cremesp.org.br", label: "CREMESP" },
+  { href: "https://CREMERN.org.br", label: "CREMERN" },
 ];
 
 export function Navbar() {
@@ -15,7 +15,7 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3 md:gap-4">
-          <img src="/crm-sp-logo.png" alt="CREMESP" className="h-8 w-auto md:h-10" width={120} height={40} />
+          <img src="/crm-rn-logo.png" alt="CREMERN" className="h-8 w-auto md:h-10" width={120} height={40} />
           <div className="hidden h-6 w-px bg-border md:block" />
           <span className="hidden text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground md:inline">
             Anuidade 2026

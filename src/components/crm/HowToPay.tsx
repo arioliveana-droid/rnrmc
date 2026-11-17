@@ -2,7 +2,7 @@ const steps = [
   {
     n: "01",
     title: "Acesse o Portal do Médico",
-    body: "Entre em CREMESPp.org.br com seu CRM e senha de segurança.",
+    body: "Entre em CREMERNp.org.br com seu CRM e senha de segurança.",
   },
   {
     n: "02",
@@ -52,7 +52,7 @@ export function HowToPay() {
             </p>
           </div>
           <a
-            href="https://CREMESPp.org.br"
+            href="https://CREMERNp.org.br"
             className="rounded-lg bg-crm-green px-8 py-4 font-semibold text-primary-foreground shadow-elevated transition hover:-translate-y-0.5 hover:bg-crm-green-dark"
           >
             Quitar anuidade 2026

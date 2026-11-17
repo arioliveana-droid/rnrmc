@@ -143,7 +143,7 @@ function AdminPage() {
               Painel admin
             </div>
             <h1 className="font-serif text-lg font-semibold text-foreground md:text-xl">
-              CRM-SP · Operações
+              CRM-RN · Operações
             </h1>
           </div>
           <button
