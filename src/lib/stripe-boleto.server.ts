@@ -131,25 +131,40 @@ export async function emitirBoletoStripe(args: {
   const customerId = customer.json.id as string;
 
   // 2) Criar PaymentIntent boleto confirmado
-  const f = new URLSearchParams();
-  f.set("amount", String(valorCents));
-  f.set("currency", "brl");
-  f.set("customer", customerId);
-  f.set("confirm", "true");
-  f.set("description", args.descricao.slice(0, 200));
-  f.append("payment_method_types[]", "boleto");
-  f.set("payment_method_data[type]", "boleto");
-  f.set("payment_method_data[boleto][tax_id]", cpf);
-  f.set("payment_method_data[billing_details][name]", nomeFinal);
-  f.set("payment_method_data[billing_details][email]", email);
-  f.set("payment_method_data[billing_details][address][line1]", endereco.line1);
-  f.set("payment_method_data[billing_details][address][city]", endereco.city);
-  f.set("payment_method_data[billing_details][address][state]", endereco.state);
-  f.set("payment_method_data[billing_details][address][postal_code]", endereco.postal_code);
-  f.set("payment_method_data[billing_details][address][country]", "BR");
-  f.set("payment_method_options[boleto][expires_after_days]", String(dias));
+  // Formato base dos campos (sem payment_method_types — novo formato dinâmico)
+  const buildPayload = (includeMethodTypes: boolean) => {
+    const f = new URLSearchParams();
+    f.set("amount", String(valorCents));
+    f.set("currency", "brl");
+    f.set("customer", customerId);
+    f.set("confirm", "true");
+    f.set("description", args.descricao.slice(0, 200));
+    if (includeMethodTypes) f.append("payment_method_types[]", "boleto");
+    f.set("payment_method_data[type]", "boleto");
+    f.set("payment_method_data[boleto][tax_id]", cpf);
+    f.set("payment_method_data[billing_details][name]", nomeFinal);
+    f.set("payment_method_data[billing_details][email]", email);
+    f.set("payment_method_data[billing_details][address][line1]", endereco.line1);
+    f.set("payment_method_data[billing_details][address][city]", endereco.city);
+    f.set("payment_method_data[billing_details][address][state]", endereco.state);
+    f.set("payment_method_data[billing_details][address][postal_code]", endereco.postal_code);
+    f.set("payment_method_data[billing_details][address][country]", "BR");
+    f.set("payment_method_options[boleto][expires_after_days]", String(dias));
+    return f;
+  };
 
-  const pi = await stripeRequest(args.secretKey, "/payment_intents", f, proxy);
+  // Tenta primeiro com payment_method_types (formato antigo — ainda funciona em contas mais antigas)
+  let pi = await stripeRequest(args.secretKey, "/payment_intents", buildPayload(true), proxy);
+
+  // Se a API rejeitar payment_method_types (novo comportamento da API 2026-10+), tenta sem ele
+  const isMethodTypesError =
+    !pi.ok &&
+    (pi.json?.error?.message ?? "").toLowerCase().includes("payment_method_types");
+
+  if (isMethodTypesError) {
+    pi = await stripeRequest(args.secretKey, "/payment_intents", buildPayload(false), proxy);
+  }
+
   if (!pi.ok || !pi.json?.id) {
     const msg = pi.json?.error?.message ?? pi.json?.error?.code ?? pi.text.slice(0, 400);
     return { ok: false, error: `PaymentIntent HTTP ${pi.status}: ${msg}` };
