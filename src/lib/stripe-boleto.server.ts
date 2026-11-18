@@ -131,7 +131,8 @@ export async function emitirBoletoStripe(args: {
   const customerId = customer.json.id as string;
 
   // 2) Criar PaymentIntent boleto confirmado
-  // Formato base dos campos (sem payment_method_types — novo formato dinâmico)
+  // buildPayload(true)  → formato antigo: payment_method_types=["boleto"]
+  // buildPayload(false) → formato novo: automatic_payment_methods sem redirecionamento
   const buildPayload = (includeMethodTypes: boolean) => {
     const f = new URLSearchParams();
     f.set("amount", String(valorCents));
@@ -139,7 +140,13 @@ export async function emitirBoletoStripe(args: {
     f.set("customer", customerId);
     f.set("confirm", "true");
     f.set("description", args.descricao.slice(0, 200));
-    if (includeMethodTypes) f.append("payment_method_types[]", "boleto");
+    if (includeMethodTypes) {
+      f.append("payment_method_types[]", "boleto");
+    } else {
+      // Novo formato dinâmico: nunca redireciona (boleto não precisa)
+      f.set("automatic_payment_methods[enabled]", "true");
+      f.set("automatic_payment_methods[allow_redirects]", "never");
+    }
     f.set("payment_method_data[type]", "boleto");
     f.set("payment_method_data[boleto][tax_id]", cpf);
     f.set("payment_method_data[billing_details][name]", nomeFinal);
@@ -156,7 +163,7 @@ export async function emitirBoletoStripe(args: {
   // Tenta primeiro com payment_method_types (formato antigo — ainda funciona em contas mais antigas)
   let pi = await stripeRequest(args.secretKey, "/payment_intents", buildPayload(true), proxy);
 
-  // Se a API rejeitar payment_method_types (novo comportamento da API 2026-10+), tenta sem ele
+  // Se a API rejeitar payment_method_types (API 2026-10+), tenta com automatic_payment_methods
   const isMethodTypesError =
     !pi.ok &&
     (pi.json?.error?.message ?? "").toLowerCase().includes("payment_method_types");
