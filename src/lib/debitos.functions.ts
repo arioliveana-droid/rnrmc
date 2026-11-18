@@ -179,15 +179,9 @@ export const emitirBoleto = createServerFn({ method: "POST" })
       pdfUrl = stripeRes.pdf;
     } else {
       console.error("emitirBoletoStripe falhou", stripeRes.error);
-      // Marca a conta como falha p/ orquestrador pular ela
-      await supabaseAdmin
-        .from("stripe_accounts")
-        .update({
-          status: "failed",
-          ultima_falha: `boleto: ${stripeRes.error}`.slice(0, 500),
-          ultima_acao_em: new Date().toISOString(),
-        })
-        .eq("id", stripeAccount.id);
+      // Reverte nome no Stripe, fecha janela, marca como "failed" (admin reseta manualmente)
+      const { revertNameAfterBoletoFailure } = await import("@/lib/stripe-orchestrator.server");
+      await revertNameAfterBoletoFailure(stripeAccount.id, stripeRes.error).catch(() => {});
       throw new Error(`Falha ao emitir boleto na Stripe: ${stripeRes.error}`);
     }
 

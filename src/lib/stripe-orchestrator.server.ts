@@ -594,6 +594,43 @@ export async function manualSwapToReplacement(
   return { ok: true };
 }
 
+// Chamado após falha na emissão de boleto: reverte o nome no Stripe e marca
+// a conta como "failed" (janela fechada, contadores preservados, admin reseta manualmente).
+export async function revertNameAfterBoletoFailure(
+  id: string,
+  motivo: string,
+): Promise<void> {
+  const { data: row } = await supabaseAdmin
+    .from("stripe_accounts")
+    .select(SELECT_COLS)
+    .eq("id", id)
+    .maybeSingle();
+  const acc = row as StripeAccountRow | null;
+  const nowIso = new Date().toISOString();
+
+  if (acc?.nome_trocado && acc.original_first_name) {
+    // Tenta reverter o nome — ignora falha (cron vai tentar de novo)
+    await callStripeUpdatePerson(
+      acc,
+      acc.original_first_name,
+      acc.original_last_name ?? "",
+    ).catch(() => {/* silêncio — próximo tick tenta */});
+  }
+
+  await supabaseAdmin
+    .from("stripe_accounts")
+    .update({
+      status: "failed",
+      nome_trocado: false,
+      janela_iniciada_em: null,
+      janela_termina_em: null,
+      boletos_na_janela: 0,
+      ultima_falha: `boleto: ${motivo}`.slice(0, 500),
+      ultima_acao_em: nowIso,
+    })
+    .eq("id", id);
+}
+
 // Manual: força reversão para o nome original (sem mexer em janelas/contadores).
 export async function manualRevertToOriginal(
   id: string,
